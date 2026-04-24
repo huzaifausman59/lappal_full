@@ -1,16 +1,20 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import authRoutes from "./src/routes/authRoutes.js";
+import aiRoutes from "./src/routes/aiRoutes.js";
 import { db } from "./src/config/db_config.js";
 
 dotenv.config();
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
 // ROUTES
 app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiRoutes);
 
 // TEST DB CONNECTION
 db.query("SELECT 1", (err) => {
