@@ -1,19 +1,5 @@
 import { PythonShell } from 'python-shell';
 
-// POST /api/ai/response
-// Request body should be a JSON object with laptop specs.
-// Example:
-// {
-//   "Company": "Lenovo",
-//   "Product": "Legion Y520-15IKBN",
-//   "Cpu": "Intel Core i7 7700HQ 2.8GHz",
-//   "Ram": "16GB",
-//   "Memory": "512GB SSD",
-//   "Gpu": "Nvidia GeForce GTX 1060",
-//   "Age_years": 5,
-//   "Condition_10": 7,
-//   "Battery_Health_%": 90
-// }
 export const getAIResponse = (req, res) => {
   const laptopSpecs = req.body;
 
@@ -68,9 +54,12 @@ export const getAIResponse = (req, res) => {
     const price = parseFloat(response);
 
     if (Number.isNaN(price)) {
-      return res.status(500).json({ message: 'Model did not return a valid numeric price', result: response });
-    }
-
-    res.json({ predictedPrice: price });
+  return res.status(500).json({
+    message: 'Model did not return a valid numeric price',
+    result: response
+  });
+}
+const finalPrice = Math.round(price * 328 - 320000);
+res.json({ predictedPrice: finalPrice });
   });
 };

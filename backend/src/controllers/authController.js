@@ -1,17 +1,36 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { createUser, findUserByEmail } from "../models/userModel.js";
+import { createUser, findUserByEmail,findUserByEmailOrUsername } from "../models/userModel.js";
 
 // SIGNUP
 export const signup = (req, res) => {
   const { username, email, password } = req.body;
 
-  const hashedPassword = bcrypt.hashSync(password, 10);
-
-  createUser(username, email, hashedPassword, (err) => {
+  // CHECK DUPLICATES
+  findUserByEmailOrUsername(email, username, (err, result) => {
     if (err) return res.status(500).json(err);
 
-    res.json({ message: "User created successfully " });
+    if (result.length > 0) {
+      const existingUser = result[0];
+
+      if (existingUser.email === email) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+
+      if (existingUser.username === username) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+    }
+
+    // HASH PASSWORD
+    const hashedPassword = bcrypt.hashSync(password, 10);
+
+    // CREATE USER
+    createUser(username, email, hashedPassword, (err) => {
+      if (err) return res.status(500).json(err);
+
+      res.json({ message: "User created successfully " });
+    });
   });
 };
 
