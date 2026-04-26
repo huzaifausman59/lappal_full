@@ -7,7 +7,9 @@ const COMPANIES = [
   "Vero", "Xiaomi",
 ];
 
-const RAM_OPTIONS = ["2GB", "4GB", "6GB", "8GB", "12GB", "16GB", "24GB", "32GB", "64GB"];
+const RAM_OPTIONS = ["4GB", "8GB", "16GB","32GB"];
+const MEMORY_OPTIONS = ["32GB Flash Storage","64GB Flash Storage","128GB Flash Storage","256GB Flash Storage", "128GB SSD", "256GB SSD", "512GB SSD", "500GB HDD", "1TB HDD"];
+
 
 const DEFAULT_FORM = {
   Company: "",
@@ -224,8 +226,12 @@ export default function PriceEstimatorScreen({ user }) {
 
           <div className="form-group">
             <label className="form-label">Storage</label>
-            <input className="form-input" placeholder="e.g. 512GB SSD"
-              value={form.Memory} onChange={(e) => handleChange("Memory", e.target.value)} />
+            <select className="form-input" value={form.Memory}
+              onChange={(e) => handleChange("Memory", e.target.value)}
+              style={{ cursor: "pointer" }}>
+              <option value="">Select Storage...</option>
+              {MEMORY_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </div>
 
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -245,15 +251,15 @@ export default function PriceEstimatorScreen({ user }) {
             Condition & Age
           </div>
 
-          <SliderField label="Age" name="Age_years" min={0} max={15}
+          <SliderField label="Age" name="Age_years" min={0} max={5}
             value={form.Age_years} unit=" yrs" onChange={handleChange}
             description="How old is the laptop?" />
 
-          <SliderField label="Condition" name="Condition_10" min={1} max={10}
+          <SliderField label="Condition" name="Condition_10" min={4} max={10}
             value={form.Condition_10} unit="/10" onChange={handleChange}
-            description="1 = heavily damaged, 10 = brand new" />
+            description="4 = heavily damaged, 10 = brand new" />
 
-          <SliderField label="Battery Health" name="Battery_Health_percent" min={0} max={100}
+          <SliderField label="Battery Health" name="Battery_Health_percent" min={60} max={100}
             value={form.Battery_Health_percent} unit="%" onChange={handleChange}
             description="Current battery capacity vs original" />
 

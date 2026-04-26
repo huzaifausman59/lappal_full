@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / 'cleaned_dataset.csv'
+DATA_PATH = BASE_DIR / 'dataset2.csv'
 MODEL_PATH = BASE_DIR / 'model.joblib'
 FEATURE_COLUMNS_PATH = BASE_DIR / 'feature_columns.json'
 
@@ -62,6 +62,7 @@ def train_model():
         raise FileNotFoundError(f"Dataset not found at {DATA_PATH}")
 
     df = pd.read_csv(DATA_PATH, encoding='ISO-8859-1')
+    
     df = df.drop(columns=DROP_COLUMNS, errors='ignore')
     df = df.dropna()
 
@@ -71,7 +72,16 @@ def train_model():
     X = preprocess_dataframe(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = XGBRegressor(n_estimators=100, learning_rate=0.1, max_depth=6, random_state=42)
+    model = xgb.XGBRegressor(
+    n_estimators=500,
+    learning_rate=0.05,
+    max_depth=5,          # limit tree depth
+    min_child_weight=10,  # require more samples per leaf
+    reg_lambda=10,        # stronger L2 penalty
+    reg_alpha=5,          # moderate L1 penalty
+    subsample=0.8,        # sample rows
+    colsample_bytree=0.8  # sample features
+    )    
     model.fit(X_train, y_train)
 
     joblib.dump(model, MODEL_PATH)
