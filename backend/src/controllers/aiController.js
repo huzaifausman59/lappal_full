@@ -59,7 +59,7 @@ export const getAIResponse = (req, res) => {
     result: response
   });
 }
-const finalPrice = Math.round(price * 328 * 0.40);
+const finalPrice = Math.round(price * 328 * 0.30);
 res.json({ predictedPrice: finalPrice });
   });
 };
