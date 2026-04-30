@@ -84,8 +84,8 @@ export default function App() {
       )}
 
       {screen === "landing"  && <LandingScreen onNavigate={navigate} />}
-      {screen === "login"    && <LoginScreen onLogin={login} />}
-      {screen === "register" && <RegisterScreen onLogin={login} />}
+      {screen === "login"    && <LoginScreen onLogin={login} onSwitchToRegister={() => navigate("register")} />}
+      {screen === "register" && <RegisterScreen onLogin={login} onSwitchToLogin={() => navigate("login")} />}
 
       {screen === "marketplace" && (
         <MarketplaceScreen onViewProduct={viewProduct} />

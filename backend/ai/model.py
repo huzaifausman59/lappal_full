@@ -72,7 +72,7 @@ def train_model():
     X = preprocess_dataframe(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = xgb.XGBRegressor(
+    model = XGBRegressor(
     n_estimators=500,
     learning_rate=0.05,
     max_depth=5,          # limit tree depth
