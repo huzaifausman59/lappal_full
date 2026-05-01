@@ -50,6 +50,12 @@ export function Navbar({ user, onNavigate, onLogoutClick, activeScreen }) {
           >
             Profile
           </button>
+          <button
+            className={`nav-link ${activeScreen === "docs" ? "active" : ""}`}
+            onClick={() => onNavigate("docs")}
+          >
+          Docs
+          </button>
           <button className="nav-link" onClick={onLogoutClick}>Logout</button>
         </div>
       )}

@@ -15,6 +15,7 @@ import SellerDashboard     from "./screens/SellerDashboard";
 import SellerProfileScreen from "./screens/SellerProfileScreen";
 import ProfileScreen       from "./screens/ProfileScreen";
 import PriceEstimatorScreen from "./screens/PriceEstimatorScreen";
+import DocsScreen from "./screens/DocsScreen";
 
 // Build initial reviews state from SELLERS mock data
 const buildInitialReviews = () => {
@@ -166,6 +167,9 @@ export default function App() {
 
       {screen === "estimator" && (
         <PriceEstimatorScreen user={user} />
+      )}
+      {screen === "docs" && (
+        <DocsScreen onNavigate={navigate} />
       )}
     </>
   );
