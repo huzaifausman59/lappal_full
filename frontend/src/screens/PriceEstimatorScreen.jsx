@@ -17,7 +17,7 @@ const MEMORY_OPTIONS = [
 
 const DEFAULT_FORM = {
   Company: "", Product: "", Cpu: "", Ram: "", Memory: "", Gpu: "",
-  Age_years: 3, Condition_10: 7, Battery_Health_percent: 80,
+  Age_years: 3, Condition_10: 7, Battery_Health_percent: 8,
 };
 
 function SliderField({ label, name, min, max, value, unit, onChange, description, tooltipText }) {
@@ -312,9 +312,9 @@ export default function PriceEstimatorScreen({ user }) {
           </div>
 
           <SliderField
-            label="Age"
+            label="Used Age"
             name="Age_years"
-            min={0} max={5}
+            min={5} max={10}
             value={form.Age_years}
             unit=" yrs"
             onChange={handleChange}
@@ -325,22 +325,22 @@ export default function PriceEstimatorScreen({ user }) {
           <SliderField
             label="Condition"
             name="Condition_10"
-            min={4} max={10}
+            min={0} max={5}
             value={form.Condition_10}
-            unit="/10"
+            unit="/5"
             onChange={handleChange}
-            description="4 = heavily damaged · 7 = good used · 10 = brand new"
+            description="0 = heavily damaged · 3 = good used · 5 = brand new"
             tooltipText="Rate the physical and functional state of the laptop"
           />
 
           <SliderField
             label="Battery Health"
             name="Battery_Health_percent"
-            min={60} max={100}
+            min={0} max={10}
             value={form.Battery_Health_percent}
-            unit="%"
+            unit="/10"
             onChange={handleChange}
-            description="80% and above is considered healthy"
+            description="8 and above is considered healthy"
             tooltipText="Check battery health in your OS settings. Windows: Battery Report. Mac: Hold Alt + click battery icon."
           />
 
@@ -361,7 +361,7 @@ export default function PriceEstimatorScreen({ user }) {
               ["Storage",   form.Memory  || "—"],
               ["Age",       `${form.Age_years} yrs`],
               ["Condition", `${form.Condition_10}/10`],
-              ["Battery",   `${form.Battery_Health_percent}%`],
+              ["Battery",   `${form.Battery_Health_percent}/10`],
             ].map(([k, v]) => (
               <div key={k} style={{
                 display: "flex", justifyContent: "space-between",
