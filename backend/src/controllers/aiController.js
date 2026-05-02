@@ -6,6 +6,7 @@ export const getAIResponse = (req, res) => {
   if (!laptopSpecs || typeof laptopSpecs !== 'object' || Array.isArray(laptopSpecs)) {
     return res.status(400).json({ message: 'Laptop specifications are required as a JSON object' });
   }
+  try {
 
   const requiredFields = [
     'Company',
@@ -62,4 +63,12 @@ export const getAIResponse = (req, res) => {
 const finalPrice = Math.round(price * 328 * 0.30);
 res.json({ predictedPrice: finalPrice });
   });
+
+    } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Internal server error" });
+    console.log(err);
+  }
+
 };

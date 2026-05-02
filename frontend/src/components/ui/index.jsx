@@ -7,37 +7,31 @@ export function Logo({ size = "sm" }) {
 
 
 export function Navbar({ user, onNavigate, onLogoutClick, activeScreen }) {
-  const home = user?.role === "seller" ? "dashboard" : "marketplace";
   return (
     <nav className="navbar" role="navigation" aria-label="Main navigation">
-      <div className="navbar-brand" onClick={() => onNavigate(home)}>
+      <div className="navbar-brand" onClick={() => onNavigate("marketplace")}>
         <LappalLogo size="sm" />
       </div>
       {user && (
         <div className="navbar-links">
-          {user.role === "seller" ? (
-            <button
-              className={`nav-link ${activeScreen === "marketplace" ? "active" : ""}`}
-              onClick={() => onNavigate("marketplace")}
-            >
-              Home
-            </button>
-          ) : (
-            <>
-              <button
-                className={`nav-link ${activeScreen === "dashboard" ? "active" : ""}`}
-                onClick={() => onNavigate("dashboard")}
-              >
-                Dashboard
-              </button>
-              <button
-                className={`nav-link ${activeScreen === "messages" ? "active" : ""}`}
-                onClick={() => onNavigate("messages")}
-              >
-                Messages
-              </button>
-            </>
-          )}
+          <button
+            className={`nav-link ${activeScreen === "marketplace" ? "active" : ""}`}
+            onClick={() => onNavigate("marketplace")}
+          >
+            Home
+          </button>
+          <button
+            className={`nav-link ${activeScreen === "dashboard" ? "active" : ""}`}
+            onClick={() => onNavigate("dashboard")}
+          >
+            Dashboard
+          </button>
+          <button
+            className={`nav-link ${activeScreen === "messages" ? "active" : ""}`}
+            onClick={() => onNavigate("messages")}
+          >
+            Messages
+          </button>
           <button
             className={`nav-link ${activeScreen === "estimator" ? "active" : ""}`}
             onClick={() => onNavigate("estimator")}
@@ -54,7 +48,7 @@ export function Navbar({ user, onNavigate, onLogoutClick, activeScreen }) {
             className={`nav-link ${activeScreen === "docs" ? "active" : ""}`}
             onClick={() => onNavigate("docs")}
           >
-          Docs
+            Docs
           </button>
           <button className="nav-link" onClick={onLogoutClick}>Logout</button>
         </div>

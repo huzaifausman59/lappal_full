@@ -1,13 +1,8 @@
 -- ============================================================
 --  LAPPAL — Laptop Marketplace
---  Database Schema
---  Covers: Auth, Users/Sellers, Listings, Messaging,
---          Reviews, Price Estimator logs
+--  Database Schema (Updated — no buyer/seller role distinction)
 -- ============================================================
 
--- ────────────────────────────────────────────────────────────
---  0. SETUP
--- ────────────────────────────────────────────────────────────
 CREATE DATABASE IF NOT EXISTS lappal
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -16,34 +11,32 @@ USE lappal;
 
 -- ────────────────────────────────────────────────────────────
 --  1. USERS
---     Sources: RegisterScreen, LoginScreen, ProfileScreen
+--     Role column removed — every user can browse AND list
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE users (
-  id            INT            UNSIGNED NOT NULL AUTO_INCREMENT,
-  username      VARCHAR(50)    NOT NULL,
-  email         VARCHAR(255)   NOT NULL,
-  password_hash VARCHAR(255)   NOT NULL,               -- bcrypt hash
-  role          ENUM('buyer','seller') NOT NULL DEFAULT 'buyer',
-  full_name     VARCHAR(100)   DEFAULT NULL,
-  location      VARCHAR(100)   DEFAULT NULL,
-  avatar_initials CHAR(2)      DEFAULT NULL,           -- e.g. "HU"
-  joined_at     TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP
-                               ON UPDATE CURRENT_TIMESTAMP,
+  id               INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  username         VARCHAR(50)  NOT NULL,
+  email            VARCHAR(255) NOT NULL,
+  password_hash    VARCHAR(255) NOT NULL,
+  full_name        VARCHAR(100) DEFAULT NULL,
+  location         VARCHAR(100) DEFAULT NULL,
+  avatar_initials  CHAR(2)      DEFAULT NULL,
+  joined_at        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE  KEY uq_users_email    (email),
-  UNIQUE  KEY uq_users_username (username)
+  UNIQUE KEY uq_users_email    (email),
+  UNIQUE KEY uq_users_username (username)
 );
 
 -- ────────────────────────────────────────────────────────────
---  2. AUTH TOKENS  (JWT blacklist / refresh tokens)
---     Sources: LoginScreen (localStorage token), RegisterScreen
+--  2. AUTH TOKENS
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE auth_tokens (
-  id          INT       UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id     INT       UNSIGNED NOT NULL,
-  token_hash  VARCHAR(255) NOT NULL,                   -- SHA-256 of JWT
+  id          INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id     INT          UNSIGNED NOT NULL,
+  token_hash  VARCHAR(255) NOT NULL,
   expires_at  TIMESTAMP    NOT NULL,
   revoked     TINYINT(1)   NOT NULL DEFAULT 0,
   created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -56,67 +49,42 @@ CREATE TABLE auth_tokens (
 );
 
 -- ────────────────────────────────────────────────────────────
---  3. SELLER PROFILES
---     Sources: SellerProfileScreen, ProductDetailScreen,
---              ProfileScreen, SellerDashboard
---     Note: a user with role='seller' gets one row here
+--  3. LISTINGS
+--     Now FK goes directly to users — no separate seller_profiles
+--     table needed since every user can list
 -- ────────────────────────────────────────────────────────────
-CREATE TABLE seller_profiles (
-  id            INT       UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id       INT       UNSIGNED NOT NULL,
-  display_name  VARCHAR(100) NOT NULL,                 -- "TechStore Pro"
-  location      VARCHAR(100) DEFAULT NULL,
-  member_since  YEAR         DEFAULT NULL,             -- e.g. 2022
-  total_sales   INT UNSIGNED NOT NULL DEFAULT 0,
-  is_verified   TINYINT(1)   NOT NULL DEFAULT 0,       -- "Verified Seller" badge
-  avg_rating    DECIMAL(3,2) NOT NULL DEFAULT 0.00,    -- cached; updated on review
-  created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
-                             ON UPDATE CURRENT_TIMESTAMP,
+CREATE TABLE listings (
+  id               INT           UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id          INT           UNSIGNED NOT NULL,
+  title            VARCHAR(150)  NOT NULL,
+  brand            VARCHAR(50)   NOT NULL,
+  price            DECIMAL(10,2) NOT NULL,
+  description      TEXT          DEFAULT NULL,
+  main_image       VARCHAR(500)  DEFAULT NULL,
+  condition_rating TINYINT       UNSIGNED NOT NULL DEFAULT 7,
+  status           ENUM('active','sold','deleted') NOT NULL DEFAULT 'active',
+  created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                 ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_seller_user (user_id),
-  CONSTRAINT fk_seller_user FOREIGN KEY (user_id)
+  INDEX idx_listing_user   (user_id),
+  INDEX idx_listing_brand  (brand),
+  INDEX idx_listing_price  (price),
+  INDEX idx_listing_status (status),
+  CONSTRAINT fk_listing_user FOREIGN KEY (user_id)
     REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ────────────────────────────────────────────────────────────
---  4. LISTINGS
---     Sources: MarketplaceScreen, SellerDashboard (add/edit/delete),
---              ProductDetailScreen, ProfileScreen (my listings)
--- ────────────────────────────────────────────────────────────
-CREATE TABLE listings (
-  id            INT           UNSIGNED NOT NULL AUTO_INCREMENT,
-  seller_id     INT           UNSIGNED NOT NULL,        -- FK → seller_profiles
-  title         VARCHAR(150)  NOT NULL,
-  brand         VARCHAR(50)   NOT NULL,                 -- filter in Marketplace
-  price         DECIMAL(10,2) NOT NULL,
-  description   TEXT          DEFAULT NULL,
-  main_image    VARCHAR(500)  DEFAULT NULL,             -- primary thumbnail URL
-  condition_rating TINYINT   UNSIGNED NOT NULL DEFAULT 7, -- 4–10 scale
-  status        ENUM('active','sold','deleted') NOT NULL DEFAULT 'active',
-  created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
-                              ON UPDATE CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (id),
-  INDEX idx_listing_seller (seller_id),
-  INDEX idx_listing_brand  (brand),
-  INDEX idx_listing_price  (price),
-  INDEX idx_listing_status (status),
-  CONSTRAINT fk_listing_seller FOREIGN KEY (seller_id)
-    REFERENCES seller_profiles(id) ON DELETE CASCADE
-);
-
--- ────────────────────────────────────────────────────────────
---  5. LISTING IMAGES  (multi-photo gallery in ProductDetailScreen)
+--  4. LISTING IMAGES
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE listing_images (
-  id          INT      UNSIGNED NOT NULL AUTO_INCREMENT,
-  listing_id  INT      UNSIGNED NOT NULL,
+  id          INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  listing_id  INT          UNSIGNED NOT NULL,
   image_url   VARCHAR(500) NOT NULL,
-  sort_order  TINYINT  UNSIGNED NOT NULL DEFAULT 0,     -- thumbnail ordering
-  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  sort_order  TINYINT      UNSIGNED NOT NULL DEFAULT 0,
+  created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
   INDEX idx_img_listing (listing_id),
@@ -125,14 +93,14 @@ CREATE TABLE listing_images (
 );
 
 -- ────────────────────────────────────────────────────────────
---  6. LISTING SPECS  (key-value specs shown in ProductDetailScreen)
+--  5. LISTING SPECS
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE listing_specs (
-  id          INT      UNSIGNED NOT NULL AUTO_INCREMENT,
-  listing_id  INT      UNSIGNED NOT NULL,
-  spec_key    VARCHAR(80)  NOT NULL,                    -- e.g. "CPU", "RAM"
-  spec_value  VARCHAR(200) NOT NULL,                    -- e.g. "Intel i7-12th Gen"
-  sort_order  TINYINT  UNSIGNED NOT NULL DEFAULT 0,
+  id          INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  listing_id  INT          UNSIGNED NOT NULL,
+  spec_key    VARCHAR(80)  NOT NULL,
+  spec_value  VARCHAR(200) NOT NULL,
+  sort_order  TINYINT      UNSIGNED NOT NULL DEFAULT 0,
 
   PRIMARY KEY (id),
   INDEX idx_spec_listing (listing_id),
@@ -141,41 +109,60 @@ CREATE TABLE listing_specs (
 );
 
 -- ────────────────────────────────────────────────────────────
+--  6. USER STATS
+--     Replaces seller_profiles — tracks stats for any user
+--     who has listings. Created automatically when a user
+--     creates their first listing.
+-- ────────────────────────────────────────────────────────────
+CREATE TABLE user_stats (
+  id           INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id      INT          UNSIGNED NOT NULL,
+  total_sales  INT          UNSIGNED NOT NULL DEFAULT 0,
+  avg_rating   DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+  is_verified  TINYINT(1)   NOT NULL DEFAULT 0,
+  updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                            ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_stats_user (user_id),
+  CONSTRAINT fk_stats_user FOREIGN KEY (user_id)
+    REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ────────────────────────────────────────────────────────────
 --  7. CONVERSATIONS
---     Sources: MessagesScreen (inbox list), ChatScreen
+--     buyer_id and seller_id are both just users now
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE conversations (
-  id           INT      UNSIGNED NOT NULL AUTO_INCREMENT,
-  buyer_id     INT      UNSIGNED NOT NULL,              -- FK → users
-  seller_id    INT      UNSIGNED NOT NULL,              -- FK → seller_profiles
-  listing_id   INT      UNSIGNED DEFAULT NULL,          -- optional context
-  status       ENUM('active','completed','archived') NOT NULL DEFAULT 'active',
-  -- "Mark as Purchased" sets this to 'completed'
-  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-               ON UPDATE CURRENT_TIMESTAMP,
+  id          INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  buyer_id    INT          UNSIGNED NOT NULL,
+  seller_id   INT          UNSIGNED NOT NULL,
+  listing_id  INT          UNSIGNED DEFAULT NULL,
+  status      ENUM('active','completed','archived') NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+              ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_convo (buyer_id, seller_id, listing_id),
   INDEX idx_convo_buyer  (buyer_id),
   INDEX idx_convo_seller (seller_id),
-  CONSTRAINT fk_convo_buyer  FOREIGN KEY (buyer_id)
+  CONSTRAINT fk_convo_buyer   FOREIGN KEY (buyer_id)
     REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_convo_seller FOREIGN KEY (seller_id)
-    REFERENCES seller_profiles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_convo_seller  FOREIGN KEY (seller_id)
+    REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_convo_listing FOREIGN KEY (listing_id)
     REFERENCES listings(id) ON DELETE SET NULL
 );
 
 -- ────────────────────────────────────────────────────────────
 --  8. MESSAGES
---     Sources: ChatScreen (send/receive, 500-char limit, timestamps)
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE messages (
-  id               INT       UNSIGNED NOT NULL AUTO_INCREMENT,
-  conversation_id  INT       UNSIGNED NOT NULL,
-  sender_id        INT       UNSIGNED NOT NULL,          -- FK → users
-  body             VARCHAR(500) NOT NULL,                -- MAX_CHARS = 500
+  id               INT          UNSIGNED NOT NULL AUTO_INCREMENT,
+  conversation_id  INT          UNSIGNED NOT NULL,
+  sender_id        INT          UNSIGNED NOT NULL,
+  body             VARCHAR(500) NOT NULL,
   is_read          TINYINT(1)   NOT NULL DEFAULT 0,
   sent_at          TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -190,23 +177,20 @@ CREATE TABLE messages (
 );
 
 -- ────────────────────────────────────────────────────────────
---  9. INBOX PREVIEWS (denormalised cache — MessagesScreen)
---     Stores the last message per conversation for fast inbox loads.
---     Updated via trigger after INSERT on messages.
+--  9. INBOX PREVIEWS
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE inbox_previews (
-  conversation_id  INT       UNSIGNED NOT NULL,
-  last_message_id  INT       UNSIGNED DEFAULT NULL,
-  preview_text     VARCHAR(100) DEFAULT NULL,            -- truncated body
+  conversation_id  INT          UNSIGNED NOT NULL,
+  last_message_id  INT          UNSIGNED DEFAULT NULL,
+  preview_text     VARCHAR(100) DEFAULT NULL,
   last_time        TIMESTAMP    DEFAULT NULL,
-  unread_count     SMALLINT  UNSIGNED NOT NULL DEFAULT 0,
+  unread_count     SMALLINT     UNSIGNED NOT NULL DEFAULT 0,
 
   PRIMARY KEY (conversation_id),
   CONSTRAINT fk_preview_convo FOREIGN KEY (conversation_id)
     REFERENCES conversations(id) ON DELETE CASCADE
 );
 
--- Trigger: keep inbox_previews up to date on every new message
 DELIMITER $$
 CREATE TRIGGER trg_update_inbox
 AFTER INSERT ON messages
@@ -225,8 +209,7 @@ END$$
 DELIMITER ;
 
 -- ────────────────────────────────────────────────────────────
---  10. DEALS  ("Mark as Purchased" in ChatScreen)
---      Records when a buyer confirms a completed transaction.
+--  10. DEALS
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE deals (
   id               INT       UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -237,18 +220,17 @@ CREATE TABLE deals (
   confirmed_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_deal_convo (conversation_id),          -- one deal per chat
+  UNIQUE KEY uq_deal_convo (conversation_id),
   CONSTRAINT fk_deal_convo   FOREIGN KEY (conversation_id)
     REFERENCES conversations(id) ON DELETE CASCADE,
   CONSTRAINT fk_deal_buyer   FOREIGN KEY (buyer_id)
     REFERENCES users(id),
   CONSTRAINT fk_deal_seller  FOREIGN KEY (seller_id)
-    REFERENCES seller_profiles(id),
+    REFERENCES users(id),
   CONSTRAINT fk_deal_listing FOREIGN KEY (listing_id)
     REFERENCES listings(id) ON DELETE SET NULL
 );
 
--- Trigger: auto-mark conversation as completed when deal is inserted
 DELIMITER $$
 CREATE TRIGGER trg_deal_complete
 AFTER INSERT ON deals
@@ -262,89 +244,56 @@ DELIMITER ;
 
 -- ────────────────────────────────────────────────────────────
 --  11. REVIEWS
---      Sources: ChatScreen → ReviewModal (rating + comment),
---               SellerProfileScreen, ProductDetailScreen,
---               ProfileScreen (my reviews section)
 -- ────────────────────────────────────────────────────────────
 CREATE TABLE reviews (
   id           INT       UNSIGNED NOT NULL AUTO_INCREMENT,
-  deal_id      INT       UNSIGNED NOT NULL,             -- must complete deal first
-  reviewer_id  INT       UNSIGNED NOT NULL,             -- buyer
-  seller_id    INT       UNSIGNED NOT NULL,             -- seller_profiles.id
-  rating       TINYINT   UNSIGNED NOT NULL,             -- 1–5 stars
+  deal_id      INT       UNSIGNED NOT NULL,
+  reviewer_id  INT       UNSIGNED NOT NULL,
+  seller_id    INT       UNSIGNED NOT NULL,
+  rating       TINYINT   UNSIGNED NOT NULL,
   comment      TEXT      DEFAULT NULL,
   reviewed_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_review_deal (deal_id),                 -- one review per deal
+  UNIQUE KEY uq_review_deal (deal_id),
   INDEX idx_review_seller   (seller_id),
   CONSTRAINT fk_review_deal     FOREIGN KEY (deal_id)
     REFERENCES deals(id) ON DELETE CASCADE,
   CONSTRAINT fk_review_reviewer FOREIGN KEY (reviewer_id)
     REFERENCES users(id),
   CONSTRAINT fk_review_seller   FOREIGN KEY (seller_id)
-    REFERENCES seller_profiles(id),
+    REFERENCES users(id),
   CONSTRAINT chk_rating CHECK (rating BETWEEN 1 AND 5)
 );
 
--- Trigger: recalculate seller avg_rating after every new review
 DELIMITER $$
-CREATE TRIGGER trg_update_seller_rating
+CREATE TRIGGER trg_update_avg_rating
 AFTER INSERT ON reviews
 FOR EACH ROW
 BEGIN
-  UPDATE seller_profiles
-  SET avg_rating = (
-    SELECT ROUND(AVG(rating), 2)
-    FROM reviews
-    WHERE seller_id = NEW.seller_id
-  )
-  WHERE id = NEW.seller_id;
+  INSERT INTO user_stats (user_id, avg_rating)
+  VALUES (NEW.seller_id, NEW.rating)
+  ON DUPLICATE KEY UPDATE
+    avg_rating = (
+      SELECT ROUND(AVG(rating), 2)
+      FROM reviews
+      WHERE seller_id = NEW.seller_id
+    );
 END$$
 DELIMITER ;
 
 -- ────────────────────────────────────────────────────────────
---  12. PRICE ESTIMATOR LOGS
---      Sources: PriceEstimatorScreen (POST /api/ai/response)
---      Logs every estimate request for analytics / model retraining
+--  SEED DATA
 -- ────────────────────────────────────────────────────────────
-CREATE TABLE price_estimate_logs (
-  id                  INT        UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id             INT        UNSIGNED DEFAULT NULL,   -- NULL = unauthenticated
-  brand               VARCHAR(50)  NOT NULL,
-  product_name        VARCHAR(150) NOT NULL,
-  cpu                 VARCHAR(100) NOT NULL,
-  ram                 VARCHAR(20)  NOT NULL,              -- "8GB", "16GB" …
-  storage             VARCHAR(50)  NOT NULL,              -- "256GB SSD" …
-  gpu                 VARCHAR(100) NOT NULL,
-  age_years           TINYINT   UNSIGNED NOT NULL,        -- 0–5
-  condition_score     TINYINT   UNSIGNED NOT NULL,        -- 4–10
-  battery_health_pct  TINYINT   UNSIGNED NOT NULL,        -- 60–100
-  predicted_price_pkr DECIMAL(12,2) DEFAULT NULL,        -- returned by AI
-  requested_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+INSERT INTO users (username, email, password_hash, full_name, location, avatar_initials) VALUES
+  ('huzaifa_u',  'huzaifa@example.com', '$2b$12$PLACEHOLDER_HASH_A', 'Huzaifa Usman', 'Lahore',  'HU'),
+  ('demo_user',  'demo@example.com',    '$2b$12$PLACEHOLDER_HASH_B', 'Demo User',     'Karachi', 'DU');
 
-  PRIMARY KEY (id),
-  INDEX idx_est_user    (user_id),
-  INDEX idx_est_brand   (brand),
-  CONSTRAINT fk_est_user FOREIGN KEY (user_id)
-    REFERENCES users(id) ON DELETE SET NULL
-);
+INSERT INTO user_stats (user_id, total_sales, is_verified) VALUES
+  (1, 47, 1),
+  (2, 3,  0);
 
--- ────────────────────────────────────────────────────────────
---  SAMPLE / SEED DATA
--- ────────────────────────────────────────────────────────────
-
--- Seed: two users (one buyer, one seller)
-INSERT INTO users (username, email, password_hash, role, full_name, location, avatar_initials) VALUES
-  ('huzaifa_u',   'huzaifa@example.com',  '$2b$12$PLACEHOLDER_HASH_A', 'seller', 'Huzaifa Usman', 'Lahore', 'HU'),
-  ('buyer_demo',  'buyer@example.com',    '$2b$12$PLACEHOLDER_HASH_B', 'buyer',  'Demo Buyer',    'Karachi', 'DB');
-
--- Seed: seller profile for huzaifa
-INSERT INTO seller_profiles (user_id, display_name, location, member_since, total_sales, is_verified) VALUES
-  (1, 'TechStore Pro', 'Lahore', 2022, 47, 1);
-
--- Seed: one listing
-INSERT INTO listings (seller_id, title, brand, price, description, main_image, condition_rating) VALUES
+INSERT INTO listings (user_id, title, brand, price, description, main_image, condition_rating) VALUES
   (1, 'Dell XPS 15 (2023)', 'Dell', 189999.00,
    'Lightly used Dell XPS 15 in excellent condition. Comes with original box and charger.',
    '/images/dell-xps15.jpg', 9);

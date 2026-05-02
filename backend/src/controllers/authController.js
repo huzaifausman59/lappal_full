@@ -5,7 +5,7 @@ import { createUser, findUserByEmail,findUserByEmailOrUsername } from "../models
 // SIGNUP
 export const signup = (req, res) => {
   const { username, email, password } = req.body;
-
+  try {
   // CHECK DUPLICATES
   findUserByEmailOrUsername(email, username, (err, result) => {
     if (err) return res.status(500).json(err);
@@ -32,11 +32,19 @@ export const signup = (req, res) => {
       res.json({ message: "User created successfully " });
     });
   });
+    } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Internal server error" });
+    console.log(err);
+  }
 };
 
 // LOGIN
 export const login = (req, res) => {
   const { email, password } = req.body;
+
+  try {
 
   findUserByEmail(email, (err, result) => {
     if (err) return res.status(500).json(err);
@@ -46,7 +54,7 @@ export const login = (req, res) => {
 
     const user = result[0];
 
-    const isMatch = bcrypt.compareSync(password, user.password);
+    const isMatch = bcrypt.compareSync(password, user.password_hash);
 
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
@@ -67,4 +75,10 @@ export const login = (req, res) => {
       },
     });
   });
+    } catch (err) {
+    res
+      .status(500)
+      .json({ message: "Internal server error" });
+    console.log(err);
+  }
 };

@@ -18,7 +18,7 @@ function getPasswordStrength(pwd) {
 }
 
 export default function RegisterScreen({ onLogin, onSwitchToLogin }) {
-  const [form, setForm]       = useState({ username: "", email: "", password: "", role: "buyer" });
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError]     = useState("");
   const [toast, setToast]     = useState(null);
   const [loading, setLoading] = useState(false);
@@ -69,7 +69,7 @@ export default function RegisterScreen({ onLogin, onSwitchToLogin }) {
       if (data.message === "User created successfully ") {
         showToast("Account created! Welcome to Lappal.");
         setTimeout(() => {
-          onLogin({ username: form.username, email: form.email, role: form.role });
+          onLogin({ username: form.username, email: form.email });
         }, 800);
       }
 
@@ -151,29 +151,6 @@ export default function RegisterScreen({ onLogin, onSwitchToLogin }) {
             )}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Register as</label>
-            <div className="radio-group" role="radiogroup" aria-label="Account type">
-              <label className="radio-label">
-                <input
-                  type="radio" name="role" value="buyer"
-                  checked={form.role === "buyer"}
-                  onChange={() => setForm({ ...form, role: "buyer" })}
-                />
-                Buyer
-                <span style={{ fontSize: 11, color: "#8b949e", marginLeft: 4 }}>— browse &amp; purchase</span>
-              </label>
-              <label className="radio-label">
-                <input
-                  type="radio" name="role" value="seller"
-                  checked={form.role === "seller"}
-                  onChange={() => setForm({ ...form, role: "seller" })}
-                />
-                Seller
-                <span style={{ fontSize: 11, color: "#8b949e", marginLeft: 4 }}>— list &amp; sell</span>
-              </label>
-            </div>
-          </div>
 
           {error && (
             <div

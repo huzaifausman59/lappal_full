@@ -54,8 +54,8 @@ export default function App() {
 
   const login = (u) => {
     setUser(u);
-    navigate(u.role === "seller" ? "dashboard" : "marketplace");
-  };
+    navigate("marketplace");
+};
 
   const logout = () => {
     setUser(null);
