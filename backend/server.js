@@ -4,6 +4,7 @@ import cors from "cors";
 import authRoutes from "./src/routes/authRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
 import { db } from "./src/config/db_config.js";
+import userRoutes from "./src/routes/userRoutes.js";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 // ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/users", userRoutes);
 
 // TEST DB CONNECTION
 db.query("SELECT 1", (err) => {
