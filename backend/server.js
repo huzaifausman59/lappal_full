@@ -5,6 +5,8 @@ import authRoutes from "./src/routes/authRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
 import { db } from "./src/config/db_config.js";
 import userRoutes from "./src/routes/userRoutes.js";
+import listingRoutes from "./src/routes/listingRoutes.js";
+import messageRoutes from "./src/routes/messageRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/listings", listingRoutes);
+// app.use("/api/messages", messageRoutes);
 
 // TEST DB CONNECTION
 db.query("SELECT 1", (err) => {

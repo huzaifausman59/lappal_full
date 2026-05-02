@@ -120,14 +120,14 @@ export default function SellerDashboard({ user, onViewProduct }) {
                     onClick={() => setEditListing(l)}
                     aria-label={`Edit ${l.title}`}
                   >
-                    ✏️ Edit
+                     Edit
                   </button>
                   <button
                     className="btn-delete-card"
                     onClick={() => confirmDelete(l)}
                     aria-label={`Delete ${l.title}`}
                   >
-                    🗑️ Delete
+                     Delete
                   </button>
                 </div>
               </div>

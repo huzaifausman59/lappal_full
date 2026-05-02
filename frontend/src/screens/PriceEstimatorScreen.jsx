@@ -17,7 +17,7 @@ const MEMORY_OPTIONS = [
 
 const DEFAULT_FORM = {
   Company: "", Product: "", Cpu: "", Ram: "", Memory: "", Gpu: "",
-  Age_years: 3, Condition_10: 7, Battery_Health_percent: 8,
+  Age_years: 5, Condition_10: 5, Battery_Health_percent: 8,
 };
 
 function SliderField({ label, name, min, max, value, unit, onChange, description, tooltipText }) {
