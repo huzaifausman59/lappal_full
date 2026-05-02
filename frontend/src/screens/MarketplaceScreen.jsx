@@ -16,7 +16,7 @@ function ListingCard({ listing, onClick }) {
       <img src={listing.image} alt={listing.title} loading="lazy" />
       <div className="listing-card-body">
         <div className="listing-card-title">{listing.title}</div>
-        <div className="listing-price">${listing.price.toLocaleString()}</div>
+        <div className="listing-price">Rs {listing.price.toLocaleString()}</div>
         <div className="listing-seller">Sold by: {listing.seller}</div>
       </div>
     </div>
@@ -80,9 +80,9 @@ export default function MarketplaceScreen({ onViewProduct }) {
         <div className="filter-section">
           {[
             ["all",      "All"],
-            ["under1k",  "Under $1K"],
-            ["1k2k",     "$1K – $2K"],
-            ["over2k",   "Over $2K"],
+            ["under1k",  "Under Rs 1K"],
+            ["1k2k",     "Rs 1K – Rs 2K"],
+            ["over2k",   "Over Rs 2K"],
           ].map(([val, label]) => (
             <label key={val} className="radio-label">
               <input
@@ -91,7 +91,7 @@ export default function MarketplaceScreen({ onViewProduct }) {
                 value={val}
                 checked={price === val}
                 onChange={() => setPrice(val)}
-                aria-label={`Price range: ${label}`}
+                aria-label={`Price range: PKR{label}`}
               />
               {label}
             </label>

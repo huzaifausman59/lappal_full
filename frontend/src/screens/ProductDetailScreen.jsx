@@ -28,7 +28,7 @@ export default function ProductDetailScreen({
       {/* Breadcrumb — recognition rather than recall (Nielsen #6) */}
       <Breadcrumb
         crumbs={[
-          { label: "Marketplace", onClick: onBack },
+          { label: " ⬅ Marketplace", onClick: onBack },
           { label: listing.title },
         ]}
       />
@@ -81,7 +81,7 @@ export default function ProductDetailScreen({
         <div className="product-side">
           <div className="product-info-card">
             <div className="product-title">{listing.title}</div>
-            <div className="product-price">${listing.price.toLocaleString()}</div>
+            <div className="product-price">Rs {listing.price.toLocaleString()}</div>
             <div className="product-desc-label">Description</div>
             <div className="product-desc">{listing.description}</div>
           </div>

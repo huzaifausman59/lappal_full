@@ -156,7 +156,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
                   <img src={l.image} alt={l.title} loading="lazy" />
                   <div className="listing-card-body">
                     <div className="listing-card-title">{l.title}</div>
-                    <div className="listing-price">${l.price.toLocaleString()}</div>
+                    <div className="listing-price">Rs {l.price.toLocaleString()}</div>
                   </div>
                 </div>
               ))}
