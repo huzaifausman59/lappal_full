@@ -10,6 +10,8 @@ import { db } from "./src/config/db_config.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import listingRoutes from "./src/routes/listingRoutes.js";
 import messageRoutes from "./src/routes/messageRoutes.js";
+import dealRoutes from "./src/routes/dealsRoutes.js";
+import reviewRoutes from "./src/routes/reviewRoutes.js";
 
 dotenv.config();
 
@@ -37,14 +39,42 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/conversations", messageRoutes);
+app.use("/api/deals", dealRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 //  SOCKET LOGIC
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // join specific chat
+  // JOIN CHAT ROOM
   socket.on("join_conversation", (conversationId) => {
     socket.join(`conversation_${conversationId}`);
+  });
+
+  // TYPING INDICATOR
+  socket.on("typing", ({ conversationId, userId }) => {
+    socket.to(`conversation_${conversationId}`).emit("typing", {
+      userId,
+    });
+  });
+
+  socket.on("stop_typing", ({ conversationId, userId }) => {
+    socket.to(`conversation_${conversationId}`).emit("stop_typing", {
+      userId,
+    });
+  });
+
+  // SEND MESSAGE (REALTIME BROADCAST)
+  socket.on("send_message", (data) => {
+    socket.to(`conversation_${data.conversationId}`).emit("receive_message", data);
+  });
+
+  // READ RECEIPT
+  socket.on("message_read", ({ conversationId, messageId, userId }) => {
+    socket.to(`conversation_${conversationId}`).emit("message_read", {
+      messageId,
+      userId,
+    });
   });
 
   socket.on("disconnect", () => {
