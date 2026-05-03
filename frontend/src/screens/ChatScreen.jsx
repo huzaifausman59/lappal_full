@@ -1,74 +1,202 @@
 import { useState, useRef, useEffect } from "react";
-import { SELLERS, INITIAL_MESSAGES } from "../data/listings";
+import { io } from "socket.io-client";
 import { Avatar, Toast } from "../components/ui";
 import ReviewModal from "../components/ReviewModal";
 
 const MAX_CHARS = 500;
+const SOCKET_URL = "http://localhost:3000";
 
-export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
-  const seller  = SELLERS[sellerId];
-  const [messages, setMessages]         = useState(INITIAL_MESSAGES[sellerId] || []);
-  const [input, setInput]               = useState("");
-  const [showConfirm, setShowConfirm]   = useState(false);
-  const [showReview, setShowReview]     = useState(false);
+export default function ChatScreen({
+  conversationId,
+  otherUser,
+  onBack,
+  onAddReview,
+  user,
+}) {
+  const [messages, setMessages]             = useState([]);
+  const [input, setInput]                   = useState("");
+  const [showConfirm, setShowConfirm]       = useState(false);
+  const [showReview, setShowReview]         = useState(false);
   const [markedComplete, setMarkedComplete] = useState(false);
-  const [toast, setToast]               = useState(null);
-  const messagesEndRef                  = useRef(null);
+  const [toast, setToast]                   = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const messagesEndRef                      = useRef(null);
+  const socketRef                           = useRef(null);
 
-  // Auto-scroll to latest message — visibility of status (Nielsen #1)
+  // ── Auto scroll ──────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ── Socket setup + fetch message history ─────────────────────────────────
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const token = localStorage.getItem("lappal_token");
+
+    // 1. Fetch existing message history from REST API
+    fetch(`http://localhost:3000/api/conversations/${conversationId}/messages`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        // Map backend shape { sender_id, body, sent_at } to local shape
+        const mapped = data.map((m) => ({
+          id:   m.id,
+          from: m.sender_id === user?.id ? "me" : "them",
+          text: m.body,
+          time: new Date(m.sent_at).toLocaleTimeString([], {
+            hour: "2-digit", minute: "2-digit",
+          }),
+        }));
+        setMessages(mapped);
+        setLoading(false);
+      })
+      .catch(() => {
+        showToast("Could not load messages.", "error");
+        setLoading(false);
+      });
+
+    // 2. Connect socket and join conversation room
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+    });
+    socketRef.current = socket;
+
+    socket.emit("join_conversation", conversationId);
+
+    // 3. Listen for incoming messages from other user
+    socket.on("receive_message", (message) => {
+      // Only add if it's not from ourselves (REST already added ours)
+      if (message.sender_id !== user?.id) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id:   message.id,
+            from: "them",
+            text: message.body,
+            time: new Date(message.sent_at).toLocaleTimeString([], {
+              hour: "2-digit", minute: "2-digit",
+            }),
+          },
+        ]);
+      }
+    });
+
+    // 4. Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, [conversationId]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const send = () => {
+  // ── Send message ──────────────────────────────────────────────────────────
+  const send = async () => {
     if (!input.trim() || input.length > MAX_CHARS) return;
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const token = localStorage.getItem("lappal_token");
+    const text  = input.trim();
+    const time  = new Date().toLocaleTimeString([], {
+      hour: "2-digit", minute: "2-digit",
+    });
+
+    // Optimistically add to UI immediately
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), from: "me", text: input.trim(), time },
+      { id: Date.now(), from: "me", text, time },
     ]);
     setInput("");
-
-    // Show sent feedback — visibility of system status (Nielsen #1)
     showToast("Message sent.", "info");
 
-    // Simulate reply
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
+    try {
+      // POST to REST — backend handles socket broadcast to other user
+      await fetch(
+        `http://localhost:3000/api/conversations/${conversationId}/messages`,
         {
-          id: Date.now() + 1,
-          from: "them",
-          text: "Thanks for reaching out! I'll get back to you shortly.",
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    }, 1200);
+          method:  "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            Authorization:   `Bearer ${token}`,
+          },
+          body: JSON.stringify({ body: text }),
+        }
+      );
+    } catch {
+      showToast("Failed to send message. Please try again.", "error");
+    }
   };
 
-  const handleReviewSubmit = ({ rating, comment }) => {
-    const newReview = {
-      id:       Date.now(),
-      reviewer: user?.name || "Anonymous",
-      rating,
-      comment,
-      date:     new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-    };
-    onAddReview(sellerId, newReview);
+  // ── Review submit ─────────────────────────────────────────────────────────
+  const handleReviewSubmit = async ({ rating, comment }) => {
+    const token = localStorage.getItem("lappal_token");
+
+    try {
+      await fetch("http://localhost:3000/api/reviews", {
+        method:  "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:  `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          rating,
+          comment,
+        }),
+      });
+    } catch {
+      showToast("Could not submit review. Please try again.", "error");
+    }
+
+    // Also update local state so profile page reflects it immediately
+    if (onAddReview) {
+      onAddReview(otherUser?.id, {
+        id:       Date.now(),
+        reviewer: user?.name || "Anonymous",
+        rating,
+        comment,
+        date: new Date().toLocaleDateString("en-US", {
+          month: "long", year: "numeric",
+        }),
+      });
+    }
+
     setShowReview(false);
     setMarkedComplete(true);
     showToast("Review submitted! Thank you for your feedback.", "success");
   };
 
-  const charsLeft   = MAX_CHARS - input.length;
-  const charsClass  = charsLeft < 50 ? (charsLeft < 0 ? "over" : "warn") : "";
-  const canSend     = input.trim().length > 0 && input.length <= MAX_CHARS;
+  // ── Mark as purchased ─────────────────────────────────────────────────────
+  const handleMarkPurchased = async () => {
+    const token = localStorage.getItem("lappal_token");
+    setShowConfirm(false);
 
+    try {
+      await fetch("http://localhost:3000/api/deals", {
+        method:  "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:  `Bearer ${token}`,
+        },
+        body: JSON.stringify({ conversation_id: conversationId }),
+      });
+    } catch {
+      showToast("Could not mark deal. Please try again.", "error");
+      return;
+    }
+
+    setShowReview(true);
+  };
+
+  const charsLeft  = MAX_CHARS - input.length;
+  const charsClass = charsLeft < 50 ? (charsLeft < 0 ? "over" : "warn") : "";
+  const canSend    = input.trim().length > 0 && input.length <= MAX_CHARS;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       {toast && <Toast message={toast.msg} type={toast.type} />}
@@ -84,16 +212,16 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
           >
             ←
           </button>
-          <Avatar name={seller.name} size={36} />
+          <Avatar name={otherUser?.name || "?"} size={36} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 15 }}>{seller.name}</div>
-            {/* Online/status hint — real world conventions (Nielsen #2) */}
+            <div style={{ fontWeight: 600, fontSize: 15 }}>
+              {otherUser?.name || "Unknown User"}
+            </div>
             <div style={{ fontSize: 11, color: "#8b949e" }}>
-              {markedComplete ? "Deal completed" : "Tap to view profile"}
+              {markedComplete ? "Deal completed" : "Active conversation"}
             </div>
           </div>
 
-          {/* Mark as Purchased — only if not already done */}
           {!markedComplete ? (
             <button
               onClick={() => setShowConfirm(true)}
@@ -118,19 +246,29 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
           )}
         </div>
 
-        {/* Messages list */}
+        {/* Messages */}
         <div
           className="chat-messages"
           role="log"
           aria-label="Chat messages"
           aria-live="polite"
         >
-          {messages.map((m) => (
+          {/* Loading state */}
+          {loading && (
+            <div style={{
+              textAlign: "center", color: "#8b949e",
+              fontSize: 13, padding: "20px 0",
+            }}>
+              Loading messages...
+            </div>
+          )}
+
+          {/* Message bubbles */}
+          {!loading && messages.map((m) => (
             <div key={m.id} className={`message-bubble ${m.from}`}>
               {m.text}
               <div className="message-time">
                 {m.time}
-                {/* Sent checkmark for own messages — Nielsen #1 */}
                 {m.from === "me" && (
                   <span style={{ marginLeft: 4, opacity: 0.7 }}>✓</span>
                 )}
@@ -138,7 +276,17 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
             </div>
           ))}
 
-          {/* Deal complete notice inside chat */}
+          {/* Empty state */}
+          {!loading && messages.length === 0 && (
+            <div style={{
+              textAlign: "center", color: "#8b949e",
+              fontSize: 13, padding: "40px 20px",
+            }}>
+              No messages yet. Say hello!
+            </div>
+          )}
+
+          {/* Deal complete notice */}
           {markedComplete && (
             <div style={{
               textAlign: "center", fontSize: 13, color: "#8b949e",
@@ -148,11 +296,10 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
             }}
               role="status"
             >
-              🎉 You marked this deal as complete
+               You marked this deal as complete
             </div>
           )}
 
-          {/* Scroll anchor */}
           <div ref={messagesEndRef} />
         </div>
 
@@ -178,12 +325,8 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
               Send
             </button>
           </div>
-
-          {/* Character counter + Enter hint — recognition not recall (Nielsen #6) */}
           <div className="chat-input-meta">
-            <span style={{ marginRight: "auto", color: "#8b949e" }}>
-              Press Enter to send
-            </span>
+            <span style={{ color: "#8b949e" }}>Press Enter to send</span>
             <span className={`char-counter ${charsClass}`}>
               {charsLeft} characters remaining
             </span>
@@ -193,17 +336,30 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
         {/* Confirm purchase modal */}
         {showConfirm && (
           <div className="modal-overlay">
-            <div className="modal-card" style={{ maxWidth: 380, textAlign: "center" }} role="dialog" aria-modal="true" aria-labelledby="confirm-purchase-title">
-              <div className="modal-title" id="confirm-purchase-title">Mark as Purchased?</div>
-              <p style={{ fontSize: 14, color: "#8b949e", marginBottom: 24, marginTop: -12, lineHeight: 1.6 }}>
+            <div
+              className="modal-card"
+              style={{ maxWidth: 380, textAlign: "center" }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="confirm-purchase-title"
+            >
+              <div className="modal-title" id="confirm-purchase-title">
+                Mark as Purchased?
+              </div>
+              <p style={{
+                fontSize: 14, color: "#8b949e",
+                marginBottom: 24, marginTop: -12, lineHeight: 1.6,
+              }}>
                 Confirm that you completed a deal with{" "}
-                <strong style={{ color: "#e6edf3" }}>{seller.name}</strong>.
+                <strong style={{ color: "#e6edf3" }}>
+                  {otherUser?.name || "this seller"}
+                </strong>.
                 You'll then be asked to leave a review.
               </p>
               <div style={{ display: "flex", gap: 12 }}>
                 <button
                   className="btn btn-primary btn-full"
-                  onClick={() => { setShowConfirm(false); setShowReview(true); }}
+                  onClick={handleMarkPurchased}
                   autoFocus
                 >
                   Yes, Confirm
@@ -222,9 +378,12 @@ export default function ChatScreen({ sellerId, onBack, onAddReview, user }) {
         {/* Review modal */}
         {showReview && (
           <ReviewModal
-            sellerName={seller.name}
+            sellerName={otherUser?.name || "the seller"}
             onSubmit={handleReviewSubmit}
-            onCancel={() => { setShowReview(false); setMarkedComplete(true); }}
+            onCancel={() => {
+              setShowReview(false);
+              setMarkedComplete(true);
+            }}
           />
         )}
       </div>

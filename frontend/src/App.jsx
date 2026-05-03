@@ -72,8 +72,10 @@ export default function App() {
 
   const viewProduct = (id) => { setActiveProduct(id); navigate("product"); };
   const viewSeller  = (id) => { setActiveSeller(id);  navigate("seller-profile"); };
-  const openChat    = (id) => { setActiveChat(id);    navigate("chat"); };
-
+const openChat = (conversationId, otherUser) => {
+  setActiveChat({ conversationId, otherUser });
+  navigate("chat");
+};
   const authScreens = ["landing", "login", "register"];
   const showNavbar  = user && !authScreens.includes(screen);
 
@@ -135,13 +137,14 @@ export default function App() {
       )}
 
       {screen === "chat" && activeChat && (
-        <ChatScreen
-          sellerId={activeChat}
-          onBack={() => navigate("messages")}
-          onAddReview={addReview}
-          user={user}
-        />
-      )}
+  <ChatScreen
+    conversationId={activeChat.conversationId}
+    otherUser={activeChat.otherUser}
+    onBack={() => navigate("messages")}
+    onAddReview={addReview}
+    user={user}
+  />
+)}
 
       {screen === "dashboard" && (
         <SellerDashboard user={user} onViewProduct={viewProduct} />
