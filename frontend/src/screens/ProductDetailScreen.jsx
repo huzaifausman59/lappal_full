@@ -1,26 +1,46 @@
-import { useState } from "react";
-import { LISTINGS, SELLERS } from "../data/listings";
 import { Breadcrumb } from "../components/ui";
 import StarRating from "../components/StarRating";
-import { calcRating } from "../App";
+import { useState, useEffect } from "react";
+import { api } from "../api";
+
 
 export default function ProductDetailScreen({
   listingId,
   onBack,
   onViewSeller,
   onMessageSeller,
-  reviews,
+  user,
 }) {
-  const listing = LISTINGS.find((l) => l.id === listingId);
-  const seller  = SELLERS[listing?.sellerId];
+  const [listing, setListing]   = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [activeImg, setActiveImg] = useState(0);
 
-  if (!listing || !seller) return null;
+  useEffect(() => {
+    api.get(`/listings/${listingId}`).then((data) => {
+      setListing(data);
+      setLoading(false);
+    });
+  }, [listingId]);
 
-  const sellerReviews = reviews?.[listing.sellerId] || [];
-  const liveRating    = sellerReviews.length > 0
-    ? calcRating(sellerReviews)
-    : seller.rating;
+  if (loading) return (
+    <div style={{ textAlign: "center", padding: "60px 20px", color: "#8b949e", fontSize: 14 }}>
+      Loading listing...
+    </div>
+  );
+
+  if (!listing) return (
+    <div style={{ textAlign: "center", padding: "60px 20px", color: "#f87171", fontSize: 14 }}>
+      Listing not found.
+    </div>
+  );
+
+  const images  = listing.images?.length > 0
+    ? listing.images.map(i => i.image_url)
+    : [listing.main_image];
+
+  const specs       = listing.specs   || [];
+  const liveRating  = listing.seller_avg_rating || 0;
+  const reviewCount = listing.seller_review_count || 0;
 
   return (
     <div className="page">
@@ -40,14 +60,14 @@ export default function ProductDetailScreen({
           {/* Main image with zoom hint — affordance (Norman) */}
           <img
             className="product-main-img"
-            src={listing.images[activeImg]}
-            alt={`${listing.title} — image ${activeImg + 1} of ${listing.images.length}`}
+            src={images[activeImg]}
+            alt={`${listing.title} — image ${activeImg + 1} of ${images.length}`}
           />
-          <p className="img-hint">Click image to zoom · {listing.images.length} photos</p>
+          <p className="img-hint">Click image to zoom · {images.length} photos</p>
 
           {/* Thumbnails */}
           <div className="thumbnail-row" role="list" aria-label="Product images">
-            {listing.images.map((img, i) => (
+            {images.map((img, i) => (
               <img
                 key={i}
                 role="listitem"
@@ -67,10 +87,10 @@ export default function ProductDetailScreen({
           <div className="specs-section">
             <div className="specs-title">Specifications</div>
             <div className="specs-grid">
-              {Object.entries(listing.specs).map(([k, v]) => (
-                <div key={k}>
-                  <div className="spec-key">{k}</div>
-                  <div className="spec-value">{v}</div>
+              {specs.map((s) => (
+                <div key={s.key}>
+                  <div className="spec-key">{s.key}</div>
+                  <div className="spec-value">{s.value}</div>
                 </div>
               ))}
             </div>
@@ -94,12 +114,12 @@ export default function ProductDetailScreen({
               <div className="seller-info-key">Seller</div>
               <div
                 className="seller-info-val seller-link"
-                onClick={() => onViewSeller(listing.sellerId)}
+                onClick={() => onViewSeller(listing.seller_id)}
                 role="button"
                 tabIndex={0}
-                aria-label={`View ${listing.seller}'s profile`}
+                aria-label={`View ${listing.seller_name}'s profile`}
               >
-                {listing.seller}
+                {listing.seller_name}
               </div>
             </div>
 
@@ -116,23 +136,35 @@ export default function ProductDetailScreen({
             <div className="seller-info-row">
               <div className="seller-info-key">Reviews</div>
               <div className="seller-info-val">
-                {sellerReviews.length} review{sellerReviews.length !== 1 ? "s" : ""}
-              </div>
+                {reviewCount} review{reviewCount !== 1 ? "s" : ""}              </div>
             </div>
 
             <div className="seller-info-row">
               <div className="seller-info-key">Member Since</div>
-              <div className="seller-info-val">{seller.since}</div>
+              <div className="seller-info-val">
+                {listing.member_since
+                  ? new Date(listing.member_since).getFullYear()
+                  : "N/A"}
+              </div>
             </div>
 
             <div className="seller-info-row" style={{ marginBottom: 18 }}>
               <div className="seller-info-key">Total Sales</div>
-              <div className="seller-info-val">{seller.totalSales} sold</div>
+              <div className="seller-info-val">{listing.seller_total_sales} sold</div>
             </div>
 
             <button
               className="btn btn-primary btn-full"
-              onClick={() => onMessageSeller(listing.sellerId)}
+              onClick={async () => {
+                const result = await api.post("/conversations", {
+                  seller_id:  listing.seller_id,
+                  listing_id: listing.id,
+                });
+                onMessageSeller(result.conversationId, {
+                  id:   listing.seller_id,
+                  name: listing.seller_name,
+                });
+              }}
               aria-label={`Send a message to ${listing.seller}`}
             >
               Message Seller
