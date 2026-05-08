@@ -34,13 +34,13 @@ app.use(cors());
 app.use(express.json());
 
 // ROUTES
-app.use("/api/auth", authRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/listings", listingRoutes);
-app.use("/api/conversations", messageRoutes);
-app.use("/api/deals", dealRoutes);
-app.use("/api/reviews", reviewRoutes);
+app.use("/auth", authRoutes);
+app.use("/ai", aiRoutes);
+app.use("/users", userRoutes);
+app.use("/listings", listingRoutes);
+app.use("/conversations", messageRoutes);
+app.use("/deals", dealRoutes);
+app.use("/reviews", reviewRoutes);
 
 //  SOCKET LOGIC
 io.on("connection", (socket) => {

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { LISTINGS } from "../data/listings";
+import { useState, useEffect } from "react";
+import { api } from "../api";
 import { EmptyState } from "../components/ui";
 import { SearchEmptyIcon } from "../components/icons";
 
@@ -13,19 +13,28 @@ function ListingCard({ listing, onClick }) {
       aria-label={`View ${listing.title} for $${listing.price.toLocaleString()}`}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
     >
-      <img src={listing.image} alt={listing.title} loading="lazy" />
+      <img src={listing.main_image} alt={listing.title} loading="lazy" />
       <div className="listing-card-body">
         <div className="listing-card-title">{listing.title}</div>
         <div className="listing-price">Rs {listing.price.toLocaleString()}</div>
-        <div className="listing-seller">Sold by: {listing.seller}</div>
+        <div className="listing-seller">Sold by: {listing.seller_name}</div>
       </div>
     </div>
   );
 }
 
 export default function MarketplaceScreen({ onViewProduct }) {
-  const [brands, setBrands] = useState([]);
-  const [price, setPrice]   = useState("all");
+  const [allListings, setAllListings] = useState([]);
+  const [brands, setBrands]           = useState([]);
+  const [price, setPrice]             = useState("all");
+  const [loading, setLoading]         = useState(true);
+
+  useEffect(() => {
+    api.get("/listings").then((data) => {
+      setAllListings(data);
+      setLoading(false);
+    });
+  }, []);
 
   const brandList = ["Dell", "ASUS", "Apple", "HP", "Lenovo"];
 
@@ -39,18 +48,24 @@ export default function MarketplaceScreen({ onViewProduct }) {
     setPrice("all");
   };
 
-  const filtered = LISTINGS.filter((l) => {
-    if (brands.length && !brands.includes(l.brand)) return false;
-    if (price === "under1k" && l.price >= 1000)              return false;
-    if (price === "1k2k" && (l.price < 1000 || l.price > 2000)) return false;
-    if (price === "over2k" && l.price <= 2000)               return false;
-    return true;
-  });
+ const filtered = allListings.filter((l) => {
+  if (brands.length && !brands.includes(l.brand)) return false;
+  if (price === "under1lac"   && l.price >= 100000)                       return false;
+  if (price === "btw1and2lac" && (l.price < 100000 || l.price > 200000)) return false;
+  if (price === "over2lac"    && l.price <= 200000)                       return false;
+  return true;
+});
 
   const activeFilterCount = brands.length + (price !== "all" ? 1 : 0);
 
   return (
     <div className="page">
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#8b949e", fontSize: 14 }}>
+          Loading listings...
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="filter-bar" role="search" aria-label="Filter listings">
@@ -80,9 +95,9 @@ export default function MarketplaceScreen({ onViewProduct }) {
         <div className="filter-section">
           {[
             ["all",      "All"],
-            ["under1k",  "Under Rs 1K"],
-            ["1k2k",     "Rs 1K – Rs 2K"],
-            ["over2k",   "Over Rs 2K"],
+            ["under1lac",  "Under Rs 1 Lac"],
+            ["btw1and2lac",     "Rs 1 Lac – Rs 2 Lac"],
+            ["over2lac",   "Over Rs 2 Lac"],
           ].map(([val, label]) => (
             <label key={val} className="radio-label">
               <input
@@ -116,7 +131,7 @@ export default function MarketplaceScreen({ onViewProduct }) {
 
       {/* Results count — visibility of system status (Nielsen #1) */}
       <div className="results-count" aria-live="polite" aria-atomic="true">
-        Showing <strong>{filtered.length}</strong> of <strong>{LISTINGS.length}</strong> listings
+        Showing <strong>{filtered.length}</strong> of <strong>{allListings.length}</strong>
         {activeFilterCount > 0 && (
           <span style={{ marginLeft: 8, color: "#2563eb", fontSize: 12 }}>
             ({activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active)
