@@ -113,7 +113,7 @@ export default function PriceEstimatorScreen({ user }) {
     try {
       const token = localStorage.getItem("lappal_token");
 
-      const res = await fetch("http://localhost:3000/api/ai/response", {
+      const res = await fetch("http://localhost:3000/ai/response", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
