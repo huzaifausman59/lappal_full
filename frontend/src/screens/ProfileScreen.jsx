@@ -1,26 +1,37 @@
-import { useState } from "react";
-import { LISTINGS, SELLERS } from "../data/listings";
 import StarRating from "../components/StarRating";
 import { BackButton, Toast } from "../components/ui";
-import { calcRating } from "../App";
+import { useState, useEffect } from "react";
+import { api } from "../api";
 
-const USER_PROFILE = {
-  name:       "Huzaifa Usman",
-  location:   "Lahore",
-  joinedDate: "Jan 2024",
-  initials:   "HU",
-  sellerId:   1,
-};
-
-export default function ProfileScreen({ onBack, onViewProduct, onNavigate, reviews }) {
+export default function ProfileScreen({ onBack, onViewProduct, onNavigate, user }) {
   const [showEditModal, setShowEditModal] = useState(false);
-  const [profile, setProfile]             = useState(USER_PROFILE);
+  const [profile, setProfile]             = useState(null);
+  const [myListings, setMyListings]       = useState([]);
+  const [myReviews, setMyReviews]         = useState([]);
+  const [loading, setLoading]             = useState(true);
   const [toast, setToast]                 = useState(null);
 
-  const seller     = SELLERS[USER_PROFILE.sellerId];
-  const myListings = LISTINGS.filter((l) => seller.listings.includes(l.id));
-  const myReviews  = reviews?.[USER_PROFILE.sellerId] || [];
-  const liveRating = myReviews.length > 0 ? calcRating(myReviews) : seller.rating;
+  useEffect(() => {
+    api.get("/users/profile").then((data) => {
+      setProfile(data);
+      setLoading(false);
+    });
+
+    if (user?.id) {
+      api.get(`/users/${user.id}/listings`).then(setMyListings);
+      api.get(`/users/${user.id}`).then((data) => {
+        setMyReviews(data.reviews || []);
+      });
+    }
+  }, [user]);
+
+  if (loading || !profile) return (
+    <div style={{ textAlign: "center", padding: "60px 20px", color: "#8b949e", fontSize: 14 }}>
+      Loading profile...
+    </div>
+  );
+
+  const liveRating = profile.avg_rating || 0;
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -44,13 +55,13 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
             aria-label={`Avatar for ${profile.name}`}
             title={profile.name}
           >
-            {profile.initials}
+            {profile.avatar_initials}
           </div>
 
-          <div className="profile-name">{profile.name}</div>
+          <div className="profile-name">{profile.full_name || profile.username}</div>
           <div className="profile-meta">
             <span style={{ color: "#2563eb" }}>📍</span>{" "}
-            {profile.location} · Joined {profile.joinedDate}
+            {profile.location || "Unknown"} · Joined {new Date(profile.joined_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
           </div>
 
           {/* Rating shown on user card — recognition not recall (Nielsen #6) */}
@@ -72,7 +83,7 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
           </div>
           <div className="profile-stat-divider" aria-hidden="true" />
           <div className="profile-stat" role="listitem">
-            <div className="profile-stat-value">{seller.totalSales}</div>
+            <div className="profile-stat-value">{profile.total_sales}</div>
             <div className="profile-stat-label">Sales</div>
           </div>
           <div className="profile-stat-divider" aria-hidden="true" />
@@ -123,10 +134,10 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
               onKeyDown={(e) => e.key === "Enter" && onViewProduct?.(l.id)}
               aria-label={`View listing: ${l.title} at $${l.price.toLocaleString()}`}
             >
-              <img src={l.image} alt={l.title} loading="lazy" />
+              <img src={l.main_image} alt={l.title} loading="lazy" />
               <div className="profile-listing-body">
                 <div className="profile-listing-title">{l.title}</div>
-                <div className="profile-listing-price">${l.price.toLocaleString()}</div>
+                <div className="profile-listing-price">Rs {l.price.toLocaleString()}</div>
               </div>
             </div>
           ))}
@@ -180,7 +191,9 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
                   <StarRating rating={r.rating} size={13} showNumber={false} />
                 </div>
                 <div className="profile-review-comment">{r.comment}</div>
-                <div className="profile-review-date">{r.date}</div>
+                <div className="profile-review-date">
+                  {new Date(r.reviewed_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </div>
               </div>
             ))}
           </div>
@@ -192,8 +205,18 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
         <EditProfileModal
           profile={profile}
           onClose={() => setShowEditModal(false)}
-          onSave={(updated) => {
-            setProfile({ ...profile, ...updated });
+          onSave={async (updated) => {
+            await api.put("/users/profile", {
+              full_name:       updated.name,
+              location:        updated.location,
+              avatar_initials: updated.initials,
+            });
+            setProfile((prev) => ({
+              ...prev,
+              full_name:       updated.name,
+              location:        updated.location,
+              avatar_initials: updated.initials,
+            }));
             setShowEditModal(false);
             showToast("Profile updated successfully.");
           }}
@@ -206,9 +229,9 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, revie
 // ── Edit Profile Modal ────────────────────────────────────────────────────────
 function EditProfileModal({ profile, onClose, onSave }) {
   const [form, setForm] = useState({
-    name:     profile.name,
-    location: profile.location,
-    initials: profile.initials,
+    name:     profile.full_name || profile.username || "",
+    location: profile.location  || "",
+    initials: profile.avatar_initials || "",
   });
   const [error, setError] = useState("");
 

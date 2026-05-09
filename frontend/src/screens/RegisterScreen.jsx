@@ -68,8 +68,44 @@ export default function RegisterScreen({ onLogin, onSwitchToLogin }) {
 
       if (data.message === "User created successfully ") {
         showToast("Account created! Welcome to Lappal.");
+
+        // Auto-generate initials from username and save to profile
+        const initials = form.username.slice(0, 2).toUpperCase();
+
+        // Login first to get the token
+        const loginRes = await fetch("http://localhost:3000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: form.email, password: form.password }),
+        });
+        const loginData = await loginRes.json();
+
+        if (loginData.token) {
+          localStorage.setItem("lappal_token", loginData.token);
+          localStorage.setItem("lappal_user", JSON.stringify(loginData.user));
+
+          // Save initials immediately
+          await fetch("http://localhost:3000/users/profile", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${loginData.token}`,
+            },
+            body: JSON.stringify({
+              full_name:       form.username,
+              location:        "",
+              avatar_initials: initials,
+            }),
+          });
+        }
+
         setTimeout(() => {
-          onLogin({ username: form.username, email: form.email });
+          onLogin({ 
+            id:       loginData.user.id,
+            username: form.username, 
+            email:    form.email,
+            token:    loginData.token,
+          });
         }, 800);
       }
 
