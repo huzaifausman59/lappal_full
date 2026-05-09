@@ -1,16 +1,29 @@
-import { LISTINGS, SELLERS } from "../data/listings";
 import { Breadcrumb } from "../components/ui";
 import StarRating from "../components/StarRating";
-import { calcRating } from "../App";
+import { useState, useEffect } from "react";
+import { api } from "../api";
 
-export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, reviews }) {
-  const seller   = SELLERS[sellerId];
-  const listings = LISTINGS.filter((l) => seller.listings.includes(l.id));
+export default function SellerProfileScreen({ sellerId, onBack, onViewProduct }) {
+  const [seller, setSeller]     = useState(null);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading]   = useState(true);
 
-  const sellerReviews = reviews?.[sellerId] || [];
-  const liveRating    = sellerReviews.length > 0
-    ? calcRating(sellerReviews)
-    : seller.rating;
+  useEffect(() => {
+    api.get(`/users/${sellerId}`).then((data) => {
+      setSeller(data);
+      setLoading(false);
+    });
+    api.get(`/users/${sellerId}/listings`).then(setListings);
+  }, [sellerId]);
+
+  if (loading || !seller) return (
+    <div style={{ textAlign: "center", padding: "60px 20px", color: "#8b949e", fontSize: 14 }}>
+      Loading seller profile...
+    </div>
+  );
+
+  const sellerReviews = seller.reviews || [];
+  const liveRating    = seller.avg_rating || 0;
 
   return (
     <div className="page">
@@ -29,8 +42,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
         <div className="seller-profile-card">
 
           {/* Seller name and rating at top — visible immediately */}
-          <div className="seller-profile-name">{seller.name}</div>
-
+          <div className="seller-profile-name">{seller.username || seller.full_name}</div>
           {/* Live rating — visibility of system status (Nielsen #1) */}
           <div style={{ marginBottom: 16 }}>
             {liveRating > 0
@@ -45,19 +57,19 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
           {/* Seller details */}
           <div className="profile-row">
             <div className="profile-key">Member Since</div>
-            <div className="profile-val">{seller.since}</div>
+            <div className="profile-val">{new Date(seller.joined_at).getFullYear()}</div>
           </div>
           <div className="profile-row">
             <div className="profile-key">Location</div>
-            <div className="profile-val">{seller.location}</div>
+            <div className="profile-val">{seller.location || "N/A"}</div>
           </div>
           <div className="profile-row">
             <div className="profile-key">Total Listings</div>
-            <div className="profile-val">{seller.listings.length}</div>
+            <div className="profile-val">{listings.length}</div>
           </div>
           <div className="profile-row">
             <div className="profile-key">Total Sales</div>
-            <div className="profile-val">{seller.totalSales} sold</div>
+            <div className="profile-val">{seller.total_sales} sold</div>
           </div>
 
           {/* Trust indicator — real world conventions (Nielsen #2) */}
@@ -71,7 +83,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
               ✓ Verified Seller
             </div>
             <div style={{ fontSize: 11, color: "#8b949e", lineHeight: 1.5 }}>
-              This seller has completed {seller.totalSales} transactions on Lappal.
+              This seller has completed {seller.total_sales} transactions on Lappal.
             </div>
           </div>
 
@@ -112,7 +124,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
                     {r.comment}
                   </div>
                   <div style={{ fontSize: 11, color: "#8b949e", marginTop: 4 }}>
-                    {r.date}
+                    {new Date(r.reviewed_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                   </div>
                 </div>
               ))}
@@ -126,7 +138,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
             className="seller-listings-title"
             style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
           >
-            <span>{seller.name}'s Listings</span>
+            <span>{seller.username}'s Listings</span>
             {/* Count — visibility of system status (Nielsen #1) */}
             <span style={{ fontSize: 13, color: "#8b949e", fontWeight: 400 }}>
               {listings.length} listing{listings.length !== 1 ? "s" : ""}
@@ -153,7 +165,7 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct, r
                   onKeyDown={(e) => e.key === "Enter" && onViewProduct(l.id)}
                   aria-label={`View ${l.title} for $${l.price.toLocaleString()}`}
                 >
-                  <img src={l.image} alt={l.title} loading="lazy" />
+                  <img src={l.main_image} alt={l.title} loading="lazy" />
                   <div className="listing-card-body">
                     <div className="listing-card-title">{l.title}</div>
                     <div className="listing-price">Rs {l.price.toLocaleString()}</div>

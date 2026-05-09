@@ -2,7 +2,6 @@ import { useState } from "react";
 import { globalStyles } from "./styles/theme";
 import { Navbar, PageProgress } from "./components/ui";
 import LogoutModal from "./components/LogoutModal";
-import { SELLERS } from "./data/listings";
 
 import LandingScreen       from "./screens/LandingScreen";
 import LoginScreen         from "./screens/LoginScreen";
@@ -16,15 +15,6 @@ import SellerProfileScreen from "./screens/SellerProfileScreen";
 import ProfileScreen       from "./screens/ProfileScreen";
 import PriceEstimatorScreen from "./screens/PriceEstimatorScreen";
 import DocsScreen from "./screens/DocsScreen";
-
-// Build initial reviews state from SELLERS mock data
-const buildInitialReviews = () => {
-  const map = {};
-  Object.entries(SELLERS).forEach(([id, seller]) => {
-    map[id] = seller.reviews || [];
-  });
-  return map;
-};
 
 // Exported so screens can import and use it
 export const calcRating = (reviews) => {
@@ -42,7 +32,7 @@ export default function App() {
   const [activeProduct, setActiveProduct] = useState(null);
   const [activeSeller, setActiveSeller]   = useState(null);
   const [activeChat, setActiveChat]       = useState(null);
-  const [reviews, setReviews]             = useState(buildInitialReviews());
+  const [reviews, setReviews] = useState({});
 
   // Navigate with page progress indicator — Nielsen #1
   const navigate = (s) => {
@@ -128,7 +118,6 @@ const openChat = (conversationId, otherUser) => {
           onBack={() => navigate("marketplace")}
           onViewSeller={viewSeller}
           onMessageSeller={openChat}
-          reviews={reviews}
         />
       )}
 
@@ -164,7 +153,7 @@ const openChat = (conversationId, otherUser) => {
           onBack={() => navigate("marketplace")}
           onViewProduct={viewProduct}
           onNavigate={navigate}
-          reviews={reviews}
+          user = {user}
         />
       )}
 
