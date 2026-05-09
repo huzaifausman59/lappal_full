@@ -1,15 +1,25 @@
-import { useState } from "react";
-import { LISTINGS } from "../data/listings";
 import { EmptyState, Toast, ConfirmDialog } from "../components/ui";
 import { NoListingsIcon } from "../components/icons";
 import ListingFormModal from "../components/ListingFormModal";
+import { useState, useEffect } from "react";
+import { api } from "../api";
 
 export default function SellerDashboard({ user, onViewProduct }) {
-  const [listings, setListings]     = useState(LISTINGS.filter((l) => l.seller === "TechStore Pro"));
-  const [showAdd, setShowAdd]       = useState(false);
-  const [editListing, setEditListing] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); // ← NEW: stores listing to delete
-  const [toast, setToast]           = useState(null);
+  const [listings, setListings]         = useState([]);
+  const [showAdd, setShowAdd]           = useState(false);
+  const [editListing, setEditListing]   = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast, setToast]               = useState(null);
+  const [loading, setLoading]           = useState(true);
+
+  useEffect(() => {
+    if (user?.id) {
+      api.get(`/users/${user.id}/listings`).then((data) => {
+        setListings(data);
+        setLoading(false);
+      });
+    }
+  }, [user]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -22,23 +32,45 @@ export default function SellerDashboard({ user, onViewProduct }) {
   };
 
   // ← NEW: called after user confirms in the dialog
-  const handleDeleteConfirmed = () => {
+  const handleDeleteConfirmed = async () => {
+    await api.delete(`/listings/${deleteTarget.id}`);
     setListings((prev) => prev.filter((l) => l.id !== deleteTarget.id));
     showToast(`"${deleteTarget.title}" has been removed.`, "success");
     setDeleteTarget(null);
   };
 
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
     if (editListing) {
+      await api.put(`/listings/${editListing.id}`, {
+        title:            data.title,
+        brand:            data.brand,
+        price:            data.price,
+        description:      data.description,
+        main_image:       data.main_image,
+        condition_rating: data.condition_rating,
+      });
       setListings((prev) =>
         prev.map((l) => (l.id === editListing.id ? { ...l, ...data } : l))
       );
       showToast("Listing updated successfully.");
     } else {
-      setListings((prev) => [
-        ...prev,
-        { ...LISTINGS[0], ...data, id: Date.now(), seller: user?.name || "Me" },
-      ]);
+      const result = await api.post("/listings", {
+        title:            data.title,
+        brand:            data.brand,
+        price:            data.price,
+        description:      data.description,
+        main_image:       data.main_image,
+        condition_rating: data.condition_rating,
+        specs: [
+          { key: "CPU",     value: data.cpu },
+          { key: "RAM",     value: data.ram },
+          { key: "Storage", value: data.storage },
+          { key: "GPU",     value: data.gpu },
+          { key: "Display", value: data.display },
+          { key: "Battery", value: data.battery },
+        ].filter((s) => s.value), // only send filled specs
+      });
+      setListings((prev) => [...prev, { ...data, id: result.listingId }]);
       showToast("New listing added successfully.");
     }
     setShowAdd(false);
@@ -61,6 +93,12 @@ export default function SellerDashboard({ user, onViewProduct }) {
           onConfirm={handleDeleteConfirmed}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: "40px 20px", color: "#8b949e", fontSize: 14 }}>
+          Loading listings...
+        </div>
       )}
 
       {/* Header */}
@@ -100,7 +138,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
               role="listitem"
             >
               <img
-                src={l.image}
+                src={l.main_image}
                 alt={l.title}
                 onClick={() => onViewProduct(l.id)}
                 style={{ cursor: "pointer" }}

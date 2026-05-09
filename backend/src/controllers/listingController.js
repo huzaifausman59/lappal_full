@@ -5,6 +5,8 @@ import { getAllListingsModel,
          deleteListingModel,
          getListingDetailsModel } from "../models/listingModel.js";
 
+import { db } from "../config/db_config.js";
+
 export const getAllListings = (req, res) => {
   const { brand, price } = req.query;
 
@@ -17,14 +19,9 @@ export const getAllListings = (req, res) => {
 
 export const createListing = (req, res) => {
   const userId = req.user.id;
-
   const {
-    title,
-    brand,
-    price,
-    description,
-    main_image,
-    condition_rating,
+    title, brand, price, description,
+    main_image, condition_rating, specs,
   } = req.body;
 
   if (!title || !brand || !price) {
@@ -32,20 +29,27 @@ export const createListing = (req, res) => {
   }
 
   createListingModel(
-    userId,
-    title,
-    brand,
-    price,
-    description,
-    main_image,
-    condition_rating,
+    userId, title, brand, price,
+    description, main_image, condition_rating,
     (err, result) => {
       if (err) return res.status(500).json(err);
 
-      res.json({
-        message: "Listing created successfully",
-        listingId: result.insertId,
-      });
+      const listingId = result.insertId;
+
+      // Save specs if provided
+      if (specs && specs.length > 0) {
+        const specValues = specs.map((s, i) => [listingId, s.key, s.value, i]);
+        const specSql = `
+          INSERT INTO listing_specs (listing_id, spec_key, spec_value, sort_order)
+          VALUES ?
+        `;
+        db.query(specSql, [specValues], (err) => {
+          if (err) return res.status(500).json(err);
+          res.json({ message: "Listing created successfully", listingId });
+        });
+      } else {
+        res.json({ message: "Listing created successfully", listingId });
+      }
     }
   );
 };
