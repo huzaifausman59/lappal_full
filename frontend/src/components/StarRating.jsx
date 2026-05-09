@@ -38,7 +38,7 @@ export default function StarRating({ rating, size = 14, showNumber = true }) {
       {Array(empty).fill("empty").map((t, i) => <Star key={"e"+i} type={t} />)}
       {showNumber && (
         <span style={{ fontSize: size, fontWeight: 600, color: "#f59e0b", marginLeft: 2 }}>
-          {rating.toFixed(1)}
+          {Number(rating).toFixed(1)}
         </span>
       )}
     </span>

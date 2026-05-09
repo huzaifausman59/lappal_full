@@ -11,7 +11,7 @@ export default function MessagesScreen({ onOpenChat, user }) {
   useEffect(() => {
     const token = localStorage.getItem("lappal_token");
 
-    fetch("http://localhost:3000/api/conversations", {
+    fetch("http://localhost:3000/conversations", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -137,12 +137,12 @@ export default function MessagesScreen({ onOpenChat, user }) {
               role="listitem"
               onClick={() => onOpenChat(
                 c.id,
-                { id: c.other_user_id, name: c.other_user_name }
+                { id: c.other_user_id, name: c.other_user_name, listing_id: c.listing_id, is_buyer: c.buyer_id === user?.id }
               )}
               tabIndex={0}
               onKeyDown={(e) =>
                 e.key === "Enter" &&
-                onOpenChat(c.id, { id: c.other_user_id, name: c.other_user_name })
+                onOpenChat(c.id, { id: c.other_user_id, name: c.other_user_name, listing_id: c.listing_id, is_buyer: c.buyer_id === user?.id })
               }
               aria-label={`Open conversation with ${c.other_user_name}. Last message: ${c.preview_text}`}
             >

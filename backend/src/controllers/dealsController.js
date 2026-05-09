@@ -5,6 +5,7 @@ export const createDeal = (req, res) => {
   const { conversation_id, listing_id, seller_id } = req.body;
 
   if (!conversation_id || !listing_id || !seller_id) {
+    console.error("Missing required fields:", { conversation_id, listing_id, seller_id });
     return res.status(400).json({
       message: "conversation_id, listing_id, seller_id required",
     });

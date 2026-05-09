@@ -63,7 +63,7 @@ export default function App() {
   const viewProduct = (id) => { setActiveProduct(id); navigate("product"); };
   const viewSeller  = (id) => { setActiveSeller(id);  navigate("seller-profile"); };
 const openChat = (conversationId, otherUser) => {
-  setActiveChat({ conversationId, otherUser });
+  setActiveChat({ conversationId, otherUser, listing_id: otherUser.listing_id ?? null, isBuyer: otherUser.is_buyer ?? true });
   navigate("chat");
 };
   const authScreens = ["landing", "login", "register"];
@@ -129,6 +129,8 @@ const openChat = (conversationId, otherUser) => {
   <ChatScreen
     conversationId={activeChat.conversationId}
     otherUser={activeChat.otherUser}
+    listing_id={activeChat.listing_id}
+    isBuyer={activeChat.isBuyer}
     onBack={() => navigate("messages")}
     onAddReview={addReview}
     user={user}

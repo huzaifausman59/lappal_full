@@ -9,6 +9,8 @@ const SOCKET_URL = "http://localhost:3000";
 export default function ChatScreen({
   conversationId,
   otherUser,
+  listing_id,
+  isBuyer,
   onBack,
   onAddReview,
   user,
@@ -20,6 +22,7 @@ export default function ChatScreen({
   const [markedComplete, setMarkedComplete] = useState(false);
   const [toast, setToast]                   = useState(null);
   const [loading, setLoading]               = useState(true);
+  const [dealId, setDealId]                 = useState(null);
   const messagesEndRef                      = useRef(null);
   const socketRef                           = useRef(null);
 
@@ -35,7 +38,7 @@ export default function ChatScreen({
     const token = localStorage.getItem("lappal_token");
 
     // 1. Fetch existing message history from REST API
-    fetch(`http://localhost:3000/api/conversations/${conversationId}/messages`, {
+    fetch(`http://localhost:3000/conversations/${conversationId}/messages`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -116,7 +119,7 @@ export default function ChatScreen({
     try {
       // POST to REST — backend handles socket broadcast to other user
       await fetch(
-        `http://localhost:3000/api/conversations/${conversationId}/messages`,
+        `http://localhost:3000/conversations/${conversationId}/messages`,
         {
           method:  "POST",
           headers: {
@@ -136,17 +139,18 @@ export default function ChatScreen({
     const token = localStorage.getItem("lappal_token");
 
     try {
-      await fetch("http://localhost:3000/api/reviews", {
+      await fetch("http://localhost:3000/reviews", {
         method:  "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization:  `Bearer ${token}`,
         },
         body: JSON.stringify({
-          conversation_id: conversationId,
+          deal_id:   dealId,
+          seller_id: otherUser?.id,
           rating,
           comment,
-        }),
+          }),
       });
     } catch {
       showToast("Could not submit review. Please try again.", "error");
@@ -176,14 +180,24 @@ export default function ChatScreen({
     setShowConfirm(false);
 
     try {
-      await fetch("http://localhost:3000/api/deals", {
-        method:  "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:  `Bearer ${token}`,
-        },
-        body: JSON.stringify({ conversation_id: conversationId }),
-      });
+      const res  = await fetch("http://localhost:3000/deals", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization:  `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    conversation_id: conversationId,
+    listing_id:      listing_id,
+    seller_id:       otherUser?.id,
+  }),
+});
+const data = await res.json();
+if (!res.ok) {
+  showToast(data.message || "Could not mark deal. Please try again.", "error");
+  return;
+}
+setDealId(data.dealId);
     } catch {
       showToast("Could not mark deal. Please try again.", "error");
       return;
@@ -222,7 +236,7 @@ export default function ChatScreen({
             </div>
           </div>
 
-          {!markedComplete ? (
+          {isBuyer && !markedComplete ? (
             <button
               onClick={() => setShowConfirm(true)}
               aria-label="Mark this deal as complete"
