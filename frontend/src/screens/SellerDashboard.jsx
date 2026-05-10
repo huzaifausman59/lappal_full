@@ -68,7 +68,8 @@ export default function SellerDashboard({ user, onViewProduct }) {
           { key: "GPU",     value: data.gpu },
           { key: "Display", value: data.display },
           { key: "Battery", value: data.battery },
-        ].filter((s) => s.value), // only send filled specs
+        ].filter((s) => s.value),
+        images: data.images || [], // only send filled specs
       });
       setListings((prev) => [...prev, { ...data, id: result.listingId }]);
       showToast("New listing added successfully.");

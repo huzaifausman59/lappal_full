@@ -33,7 +33,9 @@ export default function ListingFormModal({ existing, onClose, onSave }) {
   });
 
   const [errors, setErrors] = useState({});
-
+  const [imageUrls, setImageUrls] = useState(
+  existing?.images?.map((i) => i.image_url) || [""]
+  );
   const validate = () => {
     const e = {};
     if (!form.title.trim())             e.title   = "Please enter a title for the listing.";
@@ -47,20 +49,29 @@ export default function ListingFormModal({ existing, onClose, onSave }) {
   };
 
   const handleSave = () => {
-    const e = validate();
-    if (Object.keys(e).length > 0) {
-      setErrors(e);
-      return;
-    }
-    setErrors({});
-    onSave(form);
-  };
+  const e = validate();
+  if (Object.keys(e).length > 0) {
+    setErrors(e);
+    return;
+  }
+  setErrors({});
+  const validImages = imageUrls.filter((u) => u.trim());
+  onSave({
+    ...form,
+    main_image: validImages[0] || form.main_image,
+    images: validImages,
+  });
+};
 
   const field = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: "" }));
   };
-
+  // Add after the field() function (line 63)
+  const addImageField    = () => setImageUrls((prev) => [...prev, ""]);
+  const removeImageField = (i) => setImageUrls((prev) => prev.filter((_, idx) => idx !== i));
+  const updateImageUrl   = (i, val) =>
+  setImageUrls((prev) => prev.map((u, idx) => (idx === i ? val : u)));
   return (
     <div
       className="modal-overlay"
@@ -163,22 +174,52 @@ export default function ListingFormModal({ existing, onClose, onSave }) {
           />
         </div>
 
-        {/* Image URL */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="listing-image">
-            Image URL
-            <span style={{ color: "#8b949e", fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
-              (optional)
-            </span>
-          </label>
-          <input
-            id="listing-image"
-            className="form-input"
-            placeholder="https://..."
-            value={form.main_image}
-            onChange={(e) => setForm({ ...form, main_image: e.target.value })}
-          />
-        </div>
+       {/* Image URLs */}
+<div className="form-group">
+  <label className="form-label">
+    Image URLs
+    <span style={{ color: "#8b949e", fontWeight: 400, marginLeft: 6, fontSize: 11 }}>
+      (optional · first image shown as main)
+    </span>
+  </label>
+  {imageUrls.map((url, i) => (
+    <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+      <input
+        className="form-input"
+        placeholder="https://example.com/image.jpg"
+        value={url}
+        onChange={(e) => updateImageUrl(i, e.target.value)}
+        style={{ flex: 1 }}
+      />
+      {imageUrls.length > 1 && (
+        <button
+          type="button"
+          onClick={() => removeImageField(i)}
+          style={{
+            background: "none", border: "1px solid #ef4444",
+            color: "#f87171", borderRadius: 6, padding: "0 10px",
+            cursor: "pointer", fontSize: 16, flexShrink: 0,
+          }}
+          aria-label="Remove image"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  ))}
+  <button
+    type="button"
+    onClick={addImageField}
+    style={{
+      fontSize: 13, color: "#2563eb", background: "none",
+      border: "1px dashed #2563eb", borderRadius: 6,
+      padding: "6px 12px", cursor: "pointer", width: "100%",
+      fontFamily: "inherit",
+    }}
+  >
+    + Add another image URL
+  </button>
+</div>
 
         {/* ── Specifications ─────────────────────────────── */}
         <div style={{
