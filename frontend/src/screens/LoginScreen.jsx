@@ -2,8 +2,7 @@ import { useState } from "react";
 import { LappalLogo } from "../components/icons";
 import { Toast } from "../components/ui";
 import { API_URL, SOCKET_URL } from "../config/api";
-console.log("API_URL:", API_URL);
-console.log("SOCKET_URL:", SOCKET_URL); 
+
 export default function LoginScreen({ onLogin, onSwitchToRegister }) {
   const [form, setForm]       = useState({ email: "", password: "" });
   const [error, setError]     = useState("");
@@ -28,7 +27,8 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-
+      console.log("API_URL:", API_URL);
+console.log("SOCKET_URL:", SOCKET_URL); 
       const data = await res.json();
 
       if (data.errors && data.errors.length > 0) {

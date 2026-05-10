@@ -22,7 +22,8 @@ const server = http.createServer(app);
 
 //  SOCKET SETUP
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "http://localhost:3000",
+  process.env.FRONTEND_URL ,
+  "http://localhost:3000",
 ];
 
 const io = new Server(server, {
@@ -41,7 +42,6 @@ app.use(cors({
 //  MAKE IO AVAILABLE EVERYWHERE
 app.set("io", io);
 
-app.use(cors());
 app.use(express.json());
 
 // ROUTES
