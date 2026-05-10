@@ -2,7 +2,8 @@ import { useState } from "react";
 import { LappalLogo } from "../components/icons";
 import { Toast } from "../components/ui";
 import { API_URL, SOCKET_URL } from "../config/api";
-
+console.log("API_URL:", API_URL);
+console.log("SOCKET_URL:", SOCKET_URL); 
 export default function LoginScreen({ onLogin, onSwitchToRegister }) {
   const [form, setForm]       = useState({ email: "", password: "" });
   const [error, setError]     = useState("");
