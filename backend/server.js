@@ -21,11 +21,22 @@ const app = express();
 const server = http.createServer(app);
 
 //  SOCKET SETUP
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:3000",
+];
+
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
   },
 });
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 //  MAKE IO AVAILABLE EVERYWHERE
 app.set("io", io);
