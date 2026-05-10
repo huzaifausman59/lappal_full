@@ -23,7 +23,7 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
 
     try {
       console.log("API_URL =", API_URL);
-      const res = await fetch(`${API_URL}/api/auth/login`, {
+      const res = await fetch(`https://lappal-backend.onrender.com/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, password: form.password }),

@@ -22,7 +22,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL
+  "https://lappalfull.vercel.app"
 ].filter(Boolean); // removes undefined/null
 
 // ---------------- SOCKET IO ----------------
@@ -36,15 +36,22 @@ const io = new Server(server, {
 
 // ---------------- EXPRESS CORS ----------------
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// 🔥 FIX 2: IMPORTANT - preflight requests (THIS FIXES MANY “CANNOT CONNECT” ISSUES)
-app.options("*", cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+app.options(/.*/, cors());
 
 app.use(express.json());
 
