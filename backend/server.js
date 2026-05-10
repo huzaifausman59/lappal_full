@@ -18,12 +18,11 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// ✅ FIX 1: CLEAN & SAFE CORS ORIGINS
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://lappalfull.vercel.app"
-].filter(Boolean); // removes undefined/null
+  "https://lappalfull.vercel.app",
+];
 
 // ---------------- SOCKET IO ----------------
 const io = new Server(server, {
@@ -37,28 +36,33 @@ const io = new Server(server, {
 // ---------------- EXPRESS CORS ----------------
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like Postman)
-    if (!origin) return callback(null, true);
 
+    // Allow Postman / server-to-server requests
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Allow frontend origins
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
-    } else {
-      return callback(new Error("Not allowed by CORS"));
     }
+
+    // Block everything else
+    return callback(new Error("Not allowed by CORS"));
   },
+
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.options(/.*/, cors());
-
+// ---------------- MIDDLEWARE ----------------
 app.use(express.json());
 
-// MAKE IO AVAILABLE
+// MAKE IO AVAILABLE EVERYWHERE
 app.set("io", io);
 
-// ROUTES
+// ---------------- ROUTES ----------------
 app.use("/api/auth", authRoutes);
 app.use("/ai", aiRoutes);
 app.use("/users", userRoutes);
@@ -76,15 +80,21 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit("typing", { userId });
+    socket.to(`conversation_${conversationId}`).emit("typing", {
+      userId,
+    });
   });
 
   socket.on("stop_typing", ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit("stop_typing", { userId });
+    socket.to(`conversation_${conversationId}`).emit("stop_typing", {
+      userId,
+    });
   });
 
   socket.on("send_message", (data) => {
-    socket.to(`conversation_${data.conversationId}`).emit("receive_message", data);
+    socket
+      .to(`conversation_${data.conversationId}`)
+      .emit("receive_message", data);
   });
 
   socket.on("message_read", ({ conversationId, messageId, userId }) => {
@@ -108,8 +118,9 @@ db.query("SELECT 1", (err) => {
   }
 });
 
+// ---------------- START SERVER ----------------
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log("Server running on port " + PORT);
 });
