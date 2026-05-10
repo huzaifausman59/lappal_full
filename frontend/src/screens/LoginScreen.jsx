@@ -22,6 +22,7 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
     setLoading(true);
 
     try {
+      console.log("API_URL =", API_URL);
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

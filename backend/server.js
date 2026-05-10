@@ -1,8 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import http from "http";              
-import { Server } from "socket.io";   
+import http from "http";
+import { Server } from "socket.io";
 
 import authRoutes from "./src/routes/authRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
@@ -16,16 +16,16 @@ import reviewRoutes from "./src/routes/reviewRoutes.js";
 dotenv.config();
 
 const app = express();
-
-//  CREATE HTTP SERVER (IMPORTANT)
 const server = http.createServer(app);
 
-//  SOCKET SETUP
+// ✅ FIX 1: CLEAN & SAFE CORS ORIGINS
 const allowedOrigins = [
-  process.env.FRONTEND_URL ,
+  "http://localhost:5173",
   "http://localhost:3000",
-];
+  process.env.FRONTEND_URL
+].filter(Boolean); // removes undefined/null
 
+// ---------------- SOCKET IO ----------------
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -34,15 +34,22 @@ const io = new Server(server, {
   },
 });
 
+// ---------------- EXPRESS CORS ----------------
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
 }));
 
-//  MAKE IO AVAILABLE EVERYWHERE
-app.set("io", io);
+// 🔥 FIX 2: IMPORTANT - preflight requests (THIS FIXES MANY “CANNOT CONNECT” ISSUES)
+app.options("*", cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 
 app.use(express.json());
+
+// MAKE IO AVAILABLE
+app.set("io", io);
 
 // ROUTES
 app.use("/api/auth", authRoutes);
@@ -53,34 +60,26 @@ app.use("/conversations", messageRoutes);
 app.use("/deals", dealRoutes);
 app.use("/reviews", reviewRoutes);
 
-//  SOCKET LOGIC
+// ---------------- SOCKET LOGIC ----------------
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  // JOIN CHAT ROOM
   socket.on("join_conversation", (conversationId) => {
     socket.join(`conversation_${conversationId}`);
   });
 
-  // TYPING INDICATOR
   socket.on("typing", ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit("typing", {
-      userId,
-    });
+    socket.to(`conversation_${conversationId}`).emit("typing", { userId });
   });
 
   socket.on("stop_typing", ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit("stop_typing", {
-      userId,
-    });
+    socket.to(`conversation_${conversationId}`).emit("stop_typing", { userId });
   });
 
-  // SEND MESSAGE (REALTIME BROADCAST)
   socket.on("send_message", (data) => {
     socket.to(`conversation_${data.conversationId}`).emit("receive_message", data);
   });
 
-  // READ RECEIPT
   socket.on("message_read", ({ conversationId, messageId, userId }) => {
     socket.to(`conversation_${conversationId}`).emit("message_read", {
       messageId,
@@ -93,12 +92,12 @@ io.on("connection", (socket) => {
   });
 });
 
-// TEST DB CONNECTION
+// ---------------- DB TEST ----------------
 db.query("SELECT 1", (err) => {
   if (err) {
-    console.log("DB connection failed ", err);
+    console.log("DB connection failed", err);
   } else {
-    console.log("DB connected successfully ");
+    console.log("DB connected successfully");
   }
 });
 
