@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "../api";
 import { EmptyState } from "../components/ui";
 import { SearchEmptyIcon } from "../components/icons";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 function ListingCard({ listing, onClick }) {
   return (
@@ -30,7 +31,7 @@ export default function MarketplaceScreen({ onViewProduct }) {
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
-    api.get("/listings").then((data) => {
+    api.get(`${API_URL}/listings`).then((data) => {
       setAllListings(data);
       setLoading(false);
     });

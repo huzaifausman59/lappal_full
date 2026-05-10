@@ -3,6 +3,8 @@ import { NoListingsIcon } from "../components/icons";
 import ListingFormModal from "../components/ListingFormModal";
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import { API_URL, SOCKET_URL } from "../config/api";
+
 
 export default function SellerDashboard({ user, onViewProduct }) {
   const [listings, setListings]         = useState([]);
@@ -14,7 +16,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
 
   useEffect(() => {
     if (user?.id) {
-      api.get(`/users/${user.id}/listings`).then((data) => {
+      api.get(`${API_URL}/users/${user.id}/listings`).then((data) => {
         setListings(data);
         setLoading(false);
       });
@@ -33,7 +35,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
 
   const openEditListing = async (listing) => {
     try {
-      const fullListing = await api.get(`/listings/${listing.id}`);
+      const fullListing = await api.get(`${API_URL}/listings/${listing.id}`);
       setEditListing(fullListing);
     } catch (error) {
       showToast("Unable to load listing details for editing.", "error");
@@ -42,7 +44,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
 
   // ← NEW: called after user confirms in the dialog
   const handleDeleteConfirmed = async () => {
-    await api.delete(`/listings/${deleteTarget.id}`);
+    await api.delete(`${API_URL}/listings/${deleteTarget.id}`);
     setListings((prev) => prev.filter((l) => l.id !== deleteTarget.id));
     showToast(`"${deleteTarget.title}" has been removed.`, "success");
     setDeleteTarget(null);
@@ -59,7 +61,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
     ].filter((spec) => spec.value);
 
     if (editListing) {
-      await api.put(`/listings/${editListing.id}`, {
+      await api.put(`${API_URL}/listings/${editListing.id}`, {
         title:            data.title,
         brand:            data.brand,
         price:            data.price,
@@ -74,7 +76,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
       );
       showToast("Listing updated successfully.");
     } else {
-      const result = await api.post("/listings", {
+      const result = await api.post(`${API_URL}/listings`, {
         title:            data.title,
         brand:            data.brand,
         price:            data.price,

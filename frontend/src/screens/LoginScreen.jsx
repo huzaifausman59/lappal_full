@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LappalLogo } from "../components/icons";
 import { Toast } from "../components/ui";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 export default function LoginScreen({ onLogin, onSwitchToRegister }) {
   const [form, setForm]       = useState({ email: "", password: "" });
@@ -21,7 +22,7 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: form.email, password: form.password }),

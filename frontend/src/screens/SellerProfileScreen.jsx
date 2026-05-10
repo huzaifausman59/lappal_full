@@ -2,6 +2,7 @@ import { Breadcrumb } from "../components/ui";
 import StarRating from "../components/StarRating";
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 export default function SellerProfileScreen({ sellerId, onBack, onViewProduct }) {
   const [seller, setSeller]     = useState(null);
@@ -9,11 +10,11 @@ export default function SellerProfileScreen({ sellerId, onBack, onViewProduct })
   const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    api.get(`/users/${sellerId}`).then((data) => {
+    api.get(`${API_URL}/users/${sellerId}`).then((data) => {
       setSeller(data);
       setLoading(false);
     });
-    api.get(`/users/${sellerId}/listings`).then(setListings);
+    api.get(`${API_URL}/users/${sellerId}/listings`).then(setListings);
   }, [sellerId]);
 
   if (loading || !seller) return (

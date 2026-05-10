@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Tooltip } from "../components/ui";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 const COMPANIES = [
   "Acer", "Apple", "Asus", "Chuwi", "Dell", "Fujitsu",
@@ -113,7 +114,7 @@ export default function PriceEstimatorScreen({ user }) {
     try {
       const token = localStorage.getItem("lappal_token");
 
-      const res = await fetch("http://localhost:3000/ai/response", {
+      const res = await fetch(`${API_URL}/ai/response`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

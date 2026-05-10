@@ -4,7 +4,7 @@ import { Avatar, Toast } from "../components/ui";
 import ReviewModal from "../components/ReviewModal";
 
 const MAX_CHARS = 500;
-const SOCKET_URL = "http://localhost:3000";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 export default function ChatScreen({
   conversationId,
@@ -38,7 +38,7 @@ export default function ChatScreen({
     const token = localStorage.getItem("lappal_token");
 
     // 1. Fetch existing message history from REST API
-    fetch(`http://localhost:3000/conversations/${conversationId}/messages`, {
+    fetch(`${API_URL}/conversations/${conversationId}/messages`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -70,7 +70,6 @@ export default function ChatScreen({
 
     // 3. Listen for incoming messages from other user
     socket.on("receive_message", (message) => {
-      // Only add if it's not from ourselves (REST already added ours)
       if (message.sender_id !== user?.id) {
         setMessages((prev) => [
           ...prev,
@@ -108,7 +107,6 @@ export default function ChatScreen({
       hour: "2-digit", minute: "2-digit",
     });
 
-    // Optimistically add to UI immediately
     setMessages((prev) => [
       ...prev,
       { id: Date.now(), from: "me", text, time },
@@ -117,9 +115,9 @@ export default function ChatScreen({
     showToast("Message sent.", "info");
 
     try {
-      // POST to REST — backend handles socket broadcast to other user
+      // backend handles socket broadcast to other user
       await fetch(
-        `http://localhost:3000/conversations/${conversationId}/messages`,
+        `${API_URL}/conversations/${conversationId}/messages`,
         {
           method:  "POST",
           headers: {
@@ -139,7 +137,7 @@ export default function ChatScreen({
     const token = localStorage.getItem("lappal_token");
 
     try {
-      await fetch("http://localhost:3000/reviews", {
+      await fetch(`${API_URL}/reviews`, {
         method:  "POST",
         headers: {
           "Content-Type": "application/json",
@@ -180,7 +178,7 @@ export default function ChatScreen({
     setShowConfirm(false);
 
     try {
-      const res  = await fetch("http://localhost:3000/deals", {
+      const res  = await fetch(`${API_URL}/deals`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",

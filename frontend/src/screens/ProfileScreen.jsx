@@ -2,6 +2,8 @@ import StarRating from "../components/StarRating";
 import { BackButton, Toast } from "../components/ui";
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import { API_URL, SOCKET_URL } from "../config/api";
+
 
 export default function ProfileScreen({ onBack, onViewProduct, onNavigate, user }) {
   const [showEditModal, setShowEditModal] = useState(false);
@@ -12,14 +14,14 @@ export default function ProfileScreen({ onBack, onViewProduct, onNavigate, user 
   const [toast, setToast]                 = useState(null);
 
   useEffect(() => {
-    api.get("/users/profile").then((data) => {
+    api.get(`${API_URL}/users/profile`).then((data) => {
       setProfile(data);
       setLoading(false);
     });
 
     if (user?.id) {
-      api.get(`/users/${user.id}/listings`).then(setMyListings);
-      api.get(`/users/${user.id}`).then((data) => {
+      api.get(`${API_URL}/users/${user.id}/listings`).then(setMyListings);
+      api.get(`${API_URL}/users/${user.id}`).then((data) => {
         setMyReviews(data.reviews || []);
       });
     }

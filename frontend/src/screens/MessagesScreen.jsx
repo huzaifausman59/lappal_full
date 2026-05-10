@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Avatar } from "../components/ui";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 export default function MessagesScreen({ onOpenChat, user }) {
   const [conversations, setConversations] = useState([]);
@@ -11,7 +12,7 @@ export default function MessagesScreen({ onOpenChat, user }) {
   useEffect(() => {
     const token = localStorage.getItem("lappal_token");
 
-    fetch("http://localhost:3000/conversations", {
+    fetch(`${API_URL}/conversations`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())

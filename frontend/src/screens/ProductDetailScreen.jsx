@@ -2,6 +2,7 @@ import { Breadcrumb } from "../components/ui";
 import StarRating from "../components/StarRating";
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import { API_URL, SOCKET_URL } from "../config/api";
 
 
 export default function ProductDetailScreen({
@@ -16,7 +17,7 @@ export default function ProductDetailScreen({
   const [activeImg, setActiveImg] = useState(0);
 
   useEffect(() => {
-    api.get(`/listings/${listingId}`).then((data) => {
+    api.get(`${API_URL}/listings/${listingId}`).then((data) => {
       setListing(data);
       setLoading(false);
     });
