@@ -36,7 +36,7 @@ export default function MarketplaceScreen({ onViewProduct }) {
     });
   }, []);
 
-  const brandList = ["Dell", "ASUS", "Apple", "HP", "Lenovo"];
+  const brandList = ["Dell", "Asus", "Apple", "HP", "Lenovo"];
 
   const toggleBrand = (b) =>
     setBrands((prev) =>

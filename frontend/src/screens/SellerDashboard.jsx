@@ -31,6 +31,15 @@ export default function SellerDashboard({ user, onViewProduct }) {
     setDeleteTarget(listing);
   };
 
+  const openEditListing = async (listing) => {
+    try {
+      const fullListing = await api.get(`/listings/${listing.id}`);
+      setEditListing(fullListing);
+    } catch (error) {
+      showToast("Unable to load listing details for editing.", "error");
+    }
+  };
+
   // ← NEW: called after user confirms in the dialog
   const handleDeleteConfirmed = async () => {
     await api.delete(`/listings/${deleteTarget.id}`);
@@ -40,6 +49,15 @@ export default function SellerDashboard({ user, onViewProduct }) {
   };
 
   const handleSave = async (data) => {
+    const specs = [
+      { key: "CPU",     value: data.cpu },
+      { key: "RAM",     value: data.ram },
+      { key: "Storage", value: data.storage },
+      { key: "GPU",     value: data.gpu },
+      { key: "Display", value: data.display },
+      { key: "Battery", value: data.battery },
+    ].filter((spec) => spec.value);
+
     if (editListing) {
       await api.put(`/listings/${editListing.id}`, {
         title:            data.title,
@@ -48,6 +66,8 @@ export default function SellerDashboard({ user, onViewProduct }) {
         description:      data.description,
         main_image:       data.main_image,
         condition_rating: data.condition_rating,
+        specs,
+        images: data.images || [],
       });
       setListings((prev) =>
         prev.map((l) => (l.id === editListing.id ? { ...l, ...data } : l))
@@ -61,14 +81,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
         description:      data.description,
         main_image:       data.main_image,
         condition_rating: data.condition_rating,
-        specs: [
-          { key: "CPU",     value: data.cpu },
-          { key: "RAM",     value: data.ram },
-          { key: "Storage", value: data.storage },
-          { key: "GPU",     value: data.gpu },
-          { key: "Display", value: data.display },
-          { key: "Battery", value: data.battery },
-        ].filter((s) => s.value),
+        specs,
         images: data.images || [], // only send filled specs
       });
       setListings((prev) => [...prev, { ...data, id: result.listingId }]);
@@ -156,7 +169,7 @@ export default function SellerDashboard({ user, onViewProduct }) {
                 <div className="my-listing-actions">
                   <button
                     className="btn-edit"
-                    onClick={() => setEditListing(l)}
+                    onClick={() => openEditListing(l)}
                     aria-label={`Edit ${l.title}`}
                   >
                      Edit

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const COMPANIES = [
   "Acer", "Apple", "Asus", "Chuwi", "Dell", "Fujitsu",
@@ -16,26 +16,47 @@ const MEMORY_OPTIONS = [
 ];
 
 export default function ListingFormModal({ existing, onClose, onSave }) {
-  const [form, setForm] = useState({
-    title:            existing?.title            || "",
-    brand:            existing?.brand            || "",
-    price:            existing?.price            || "",
-    description:      existing?.description      || "",
-    main_image:       existing?.main_image       || "",
-    condition_rating: existing?.condition_rating || 7,
-    // specs
-    cpu:     existing?.cpu     || "",
-    ram:     existing?.ram     || "",
-    storage: existing?.storage || "",
-    gpu:     existing?.gpu     || "",
-    display: existing?.display || "",
-    battery: existing?.battery || "",
-  });
+  const buildInitialForm = (listing) => {
+    const getSpecValue = (key) =>
+      listing?.specs?.find((spec) => spec.key === key)?.value || "";
 
+    return {
+      title:            listing?.title            || "",
+      brand:            listing?.brand            || "",
+      price:            listing?.price            || "",
+      description:      listing?.description      || "",
+      main_image:       listing?.main_image       || listing?.image || "",
+      condition_rating: listing?.condition_rating || 7,
+      cpu:              listing?.cpu              || getSpecValue("CPU"),
+      ram:              listing?.ram              || getSpecValue("RAM"),
+      storage:          listing?.storage          || getSpecValue("Storage"),
+      gpu:              listing?.gpu              || getSpecValue("GPU"),
+      display:          listing?.display          || getSpecValue("Display"),
+      battery:          listing?.battery          || getSpecValue("Battery"),
+    };
+  };
+
+  const buildInitialImageUrls = (listing) => {
+    if (listing?.images?.length > 0) {
+      return listing.images.map((image) => image.image_url);
+    }
+
+    if (listing?.main_image || listing?.image) {
+      return [listing.main_image || listing.image];
+    }
+
+    return [""];
+  };
+
+  const [form, setForm] = useState(() => buildInitialForm(existing));
   const [errors, setErrors] = useState({});
-  const [imageUrls, setImageUrls] = useState(
-  existing?.images?.map((i) => i.image_url) || [""]
-  );
+  const [imageUrls, setImageUrls] = useState(() => buildInitialImageUrls(existing));
+
+  useEffect(() => {
+    setForm(buildInitialForm(existing));
+    setImageUrls(buildInitialImageUrls(existing));
+    setErrors({});
+  }, [existing]);
   const validate = () => {
     const e = {};
     if (!form.title.trim())             e.title   = "Please enter a title for the listing.";

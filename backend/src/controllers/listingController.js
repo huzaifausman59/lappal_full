@@ -69,7 +69,16 @@ export const updateListing = (req, res) => {
   const userId = req.user.id;
   const listingId = req.params.listingId;
 
-  const updates = req.body;
+  const {
+    specs,
+    images,
+    title,
+    brand,
+    price,
+    description,
+    main_image,
+    condition_rating,
+  } = req.body;
 
   // STEP 1: get listing
   getListingById(listingId, (err, results) => {
@@ -86,11 +95,64 @@ export const updateListing = (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // STEP 3: update
+    const updates = {
+      title,
+      brand,
+      price,
+      description,
+      main_image,
+      condition_rating,
+    };
+
+    // STEP 3: update listing row, then replace related specs and images
     updateListingModel(listingId, updates, (err) => {
       if (err) return res.status(500).json(err);
 
-      res.json({ message: "Listing updated successfully" });
+      const saveSpecs = (next) => {
+        if (!Array.isArray(specs)) return next();
+
+        db.query("DELETE FROM listing_specs WHERE listing_id = ?", [listingId], (err) => {
+          if (err) return res.status(500).json(err);
+
+          if (specs.length === 0) return next();
+
+          const specValues = specs.map((spec, index) => [listingId, spec.key, spec.value, index]);
+          db.query(
+            "INSERT INTO listing_specs (listing_id, spec_key, spec_value, sort_order) VALUES ?",
+            [specValues],
+            (err) => {
+              if (err) return res.status(500).json(err);
+              next();
+            }
+          );
+        });
+      };
+
+      const saveImages = (next) => {
+        if (!Array.isArray(images)) return next();
+
+        db.query("DELETE FROM listing_images WHERE listing_id = ?", [listingId], (err) => {
+          if (err) return res.status(500).json(err);
+
+          if (images.length === 0) return next();
+
+          const imageValues = images.map((url, index) => [listingId, url, index]);
+          db.query(
+            "INSERT INTO listing_images (listing_id, image_url, sort_order) VALUES ?",
+            [imageValues],
+            (err) => {
+              if (err) return res.status(500).json(err);
+              next();
+            }
+          );
+        });
+      };
+
+      saveSpecs(() => {
+        saveImages(() => {
+          res.json({ message: "Listing updated successfully" });
+        });
+      });
     });
   });
 };
