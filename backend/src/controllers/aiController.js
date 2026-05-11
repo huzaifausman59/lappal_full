@@ -30,7 +30,7 @@ export const getAIResponse = (req, res) => {
 
   const pyshell = new PythonShell('model.py', {
     mode: 'text',
-    pythonPath: 'py',
+    pythonPath: process.platform === "win32" ? "py" : "python3",
     pythonOptions: ['-u'],
     scriptPath: './ai/',
     stdio: ['pipe', 'pipe', 'pipe']
