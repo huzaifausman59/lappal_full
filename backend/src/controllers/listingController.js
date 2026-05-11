@@ -95,15 +95,15 @@ export const updateListing = (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const updates = {
-      title,
-      brand,
-      price,
-      description,
-      main_image,
-      condition_rating,
-    };
+    const updates = {};
 
+    if (title !== undefined) updates.title = title;
+    if (brand !== undefined) updates.brand = brand;
+    if (price !== undefined) updates.price = price;
+    if (description !== undefined) updates.description = description;
+    if (main_image !== undefined) updates.main_image = main_image;
+    if (condition_rating !== undefined) updates.condition_rating = condition_rating;
+    
     // STEP 3: update listing row, then replace related specs and images
     updateListingModel(listingId, updates, (err) => {
       if (err) return res.status(500).json(err);
