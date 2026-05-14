@@ -174,14 +174,13 @@ export default function DocsScreen({ onNavigate }) {
         </p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 40, alignItems: "start" }}>
-
+<div className="docs-layout" style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 40, alignItems: "start" }}>
         {/* Sidebar — table of contents */}
-        <div style={{
-          position: "sticky", top: 76,
-          background: "#161b22", border: "1px solid #21262d",
-          borderRadius: 12, padding: "16px 0", flexShrink: 0,
-        }}>
+        <div className="docs-sidebar" style={{
+  position: "sticky", top: 76,
+  background: "#161b22", border: "1px solid #21262d",
+  borderRadius: 12, padding: "16px 0", flexShrink: 0,
+}}>
           <div style={{
             fontSize: 12, fontWeight: "bolder", color: "#8b949e",
             textTransform: "uppercase", letterSpacing: "0.8px",

@@ -13,10 +13,10 @@ export default function LandingScreen({ onNavigate }) {
       </p>
 
       {/* Feature highlights — match between system and real world (Nielsen #2) */}
-      <div style={{
-        display: "flex", gap: 24, marginBottom: 40, flexWrap: "wrap",
-        justifyContent: "center",
-      }}>
+      <div className="landing-features" style={{
+  display: "flex", gap: 24, marginBottom: 40, flexWrap: "wrap",
+  justifyContent: "center",
+}}>
 {[
   {
     label: "Browse listings",

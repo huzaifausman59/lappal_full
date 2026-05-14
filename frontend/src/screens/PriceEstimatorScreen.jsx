@@ -199,8 +199,8 @@ export default function PriceEstimatorScreen({ user }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-
+<div className="estimator-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+  
         {/* Left: Laptop Details */}
         <div style={{
           background: "#161b22", border: "1px solid #21262d",
